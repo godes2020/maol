@@ -54,3 +54,7 @@ pub fn other_moa_running() -> bool {
 pub fn ensure_overlay_style(_window: &slint::Window) -> bool {
     false
 }
+/// Elsewhere the overlay draws its glow itself (the window has real alpha).
+pub fn set_glow(_glow: Option<super::Glow>) {}
+
+pub fn glow_owner(_window: &slint::Window) {}

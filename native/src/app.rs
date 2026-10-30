@@ -97,6 +97,8 @@ pub struct App {
     hotkeys: RefCell<Hotkeys>,
     timers: RefCell<Vec<Timer>>,
     frame_timer: Timer,
+    /// Card height the glow follows, eased like the card's own animation.
+    glow_h: Cell<f32>,
 
     sys_state: RefCell<Option<TrackState>>,
     ext_state: RefCell<Option<TrackState>>,
@@ -152,6 +154,7 @@ impl App {
             hotkeys: RefCell::new(hotkeys),
             timers: RefCell::new(Vec::new()),
             frame_timer: Timer::default(),
+            glow_h: Cell::new(0.0),
             sys_state: RefCell::new(None),
             ext_state: RefCell::new(None),
             ext_connected: Cell::new(false),
@@ -400,11 +403,13 @@ impl App {
             let _ = w.show();
             platform::prepare_overlay(w);
             self.repaint_overlay();
+            platform::glow_owner(w);
             self.click_through.set(false);
             self.update_click_through();
         } else if !show && w.is_visible() {
             let _ = w.hide();
         }
+        self.sync_glow(1.0);
     }
 
     /// Locked: every click goes into the game. Only edit mode and hover
@@ -544,6 +549,7 @@ impl App {
                         app.repaint_overlay();
                     }
                 }
+                app.sync_glow(0.06);
                 // Moved by dragging in edit mode.
                 let p = app.overlay.window().position();
                 if (p.x, p.y) != app.last_pos.get() && app.resize.borrow().is_none() {
@@ -640,6 +646,7 @@ impl App {
         let (e, p, bands) = (sh.energy, sh.pulse, sh.bands);
         drop(sh);
         drop(tgt);
+        self.sync_glow(dt);
         if playing {
             self.clock.set(self.clock.get() + dt as f64);
         }
@@ -679,6 +686,47 @@ impl App {
         if let Some(a) = self.appwin.borrow().as_ref() {
             f(a.global::<crate::Track>());
         }
+    }
+
+    /// The glow layer under a colour-keyed overlay (see platform::set_glow):
+    /// follows the card's shape and position, breathes with the music.
+    fn sync_glow(&self, dt: f32) {
+        let o = &self.overlay;
+        let w = o.window();
+        if !platform::overlay_keyed() || !w.is_visible() {
+            platform::set_glow(None);
+            return;
+        }
+        let cover = o.get_layout_cover();
+        let open = o.get_editing() || o.get_hot() || o.get_always_expanded();
+        let (bw, _) = box_size(cover);
+        let target = if cover { 96.0 } else if open { 136.0 } else { 76.0 };
+        let h = self.glow_h.get();
+        let h = if h == 0.0 || (h - target).abs() < 0.5 { target } else { h + (target - h) * (1.0 - (-12.0 * dt).exp()) };
+        self.glow_h.set(h);
+        let k = self.overlay_scale() * w.scale_factor();
+        let win = self.overlay_rect();
+        let pad = (PAD * k).round() as i32;
+        let ch = (h * k).round() as i32;
+        let card = Rect { x: pad, y: if o.get_anchor_bottom() { win.h - pad - ch } else { pad }, w: (bw * k).round() as i32, h: ch };
+        let rgb = |c: slint::Color| (c.red(), c.green(), c.blue());
+        let th = o.global::<crate::Theme>();
+        let (playing, reactive, intensity) = {
+            let c = self.cfg.borrow();
+            (self.state.borrow().playing, c.overlay.reactive, c.overlay.intensity)
+        };
+        let sh = self.shown.borrow();
+        let beat = if reactive { (sh.pulse * intensity).min(1.0) } else { 0.0 };
+        let strength = if playing { 0.35 + 0.5 * beat + 0.15 * sh.energy } else { 0.25 };
+        drop(sh);
+        platform::set_glow(Some(platform::Glow {
+            win,
+            card,
+            radius: ((if cover { 14.0 } else { 12.0 }) * k).round() as i32,
+            c1: rgb(th.get_c1()),
+            c2: rgb(th.get_c2()),
+            strength: strength * o.get_card_opacity(),
+        }));
     }
 
     fn each_theme(&self, f: impl Fn(crate::Theme<'_>)) {
