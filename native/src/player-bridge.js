@@ -16,11 +16,43 @@
   }
 
   // Sites often play through `new Audio()` that never joins the DOM.
+  // Sites also tend to reset the volume for every new track, so the volume
+  // asked in Moa is applied again to whatever starts playing.
   let last = null;
+  let want = null;
+  let applying = false;
+  const apply = (m) => {
+    if (want === null || Math.abs(m.volume - want) < 0.005) return;
+    applying = true;
+    m.volume = want;
+    applying = false;
+  };
   const play = HTMLMediaElement.prototype.play;
   HTMLMediaElement.prototype.play = function (...args) {
     last = this;
+    apply(this);
     return play.apply(this, args);
+  };
+  // The site's own volume control wins from then on.
+  document.addEventListener('volumechange', (e) => {
+    if (!applying && want !== null && Math.abs(e.target.volume - want) > 0.01 && e.isTrusted && document.hasFocus()) want = null;
+  }, true);
+
+  // YouTube Music keeps its own volume and loudness normalisation on top of
+  // the <video> element and puts it back after a few seconds, so there the
+  // volume goes through the player's API and the page's own slider.
+  const yt = () => {
+    const p = document.getElementById('movie_player');
+    return p && typeof p.setVolume === 'function' && typeof p.getVolume === 'function' ? p : null;
+  };
+  const ytSet = (p, v) => {
+    p.setVolume(v);
+    if (v > 0 && p.isMuted && p.isMuted()) p.unMute();
+    const slider = document.querySelector('ytmusic-player-bar #volume-slider');
+    if (slider && 'value' in slider) {
+      slider.value = v;
+      slider.dispatchEvent(new CustomEvent('change', { bubbles: true }));
+    }
   };
   const media = () => {
     const all = [...document.querySelectorAll('audio, video')];
@@ -48,9 +80,14 @@
       currentTime: m ? m.currentTime || 0 : 0,
       canSeek: duration > 0,
       repeat: null,
-      volume: m ? Math.round(m.volume * 100) : null,
-      muted: m ? m.muted : false
+      ...volumeState(m)
     };
+  }
+
+  function volumeState(m) {
+    const p = yt();
+    if (p) return { volume: Math.round(p.getVolume()), muted: !!(p.isMuted && p.isMuted()) };
+    return { volume: m ? Math.round(m.volume * 100) : null, muted: m ? m.muted : false };
   }
 
   let sent = '';
@@ -98,16 +135,30 @@
         }
         case 'setVolume':
         case 'volumeBy': {
+          const p = yt();
+          if (p) {
+            const v = Math.round(Math.max(0, Math.min(100, name === 'setVolume' ? arg : p.getVolume() + arg)));
+            ytSet(p, v);
+            return v;
+          }
           if (!m) return null;
           const v = name === 'setVolume' ? arg : m.volume * 100 + arg;
-          m.volume = Math.max(0, Math.min(100, v)) / 100;
+          want = Math.max(0, Math.min(100, v)) / 100;
+          apply(m);
           if (m.muted && v > 0) m.muted = false;
           return Math.round(m.volume * 100);
         }
-        case 'toggleMute':
+        case 'toggleMute': {
+          const p = yt();
+          if (p && p.isMuted) {
+            const muted = p.isMuted();
+            muted ? p.unMute() : p.mute();
+            return !muted;
+          }
           if (!m) return null;
           m.muted = !m.muted;
           return m.muted;
+        }
         default:
           return null;
       }

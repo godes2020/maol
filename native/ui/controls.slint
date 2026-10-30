@@ -53,7 +53,12 @@ export component Slider inherits Rectangle {
     callback changed(float);
     callback released(float);
     height: 18px;
-    property <float> ratio: maximum > minimum ? (value - minimum) / (maximum - minimum) : 0;
+    // While dragging the knob follows the pointer; `value` stays bound to
+    // whatever the parent passes, so outside updates are not lost.
+    property <float> drag-value;
+    property <bool> dragging;
+    property <float> shown: dragging ? drag-value : value;
+    property <float> ratio: maximum > minimum ? (shown - minimum) / (maximum - minimum) : 0;
     Rectangle {
         y: (parent.height - 6px) / 2;
         height: 6px;
@@ -84,15 +89,24 @@ export component Slider inherits Rectangle {
     function set-from(x: length) {
         let r = max(0, min(1, x / root.width));
         let v = root.minimum + r * (root.maximum - root.minimum);
-        root.value = root.step > 0 ? round(v / root.step) * root.step : v;
-        root.changed(root.value);
+        let snapped = root.step > 0 ? round(v / root.step) * root.step : v;
+        if (snapped != root.drag-value || !root.dragging) {
+            root.drag-value = snapped;
+            root.changed(snapped);
+        }
     }
     ta := TouchArea {
         enabled: root.enabled;
         mouse-cursor: pointer;
         pointer-event(e) => {
-            if (e.kind == PointerEventKind.down) { root.set-from(self.mouse-x); }
-            if (e.kind == PointerEventKind.up) { root.released(root.value); }
+            if (e.kind == PointerEventKind.down) {
+                root.set-from(self.mouse-x);
+                root.dragging = true;
+            }
+            if (e.kind == PointerEventKind.up && root.dragging) {
+                root.dragging = false;
+                root.released(root.drag-value);
+            }
         }
         moved => { if (self.pressed) { root.set-from(self.mouse-x); } }
     }

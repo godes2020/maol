@@ -318,6 +318,35 @@ component GuideSection inherits Rectangle {
     }
 }
 
+// A setting with a slider. Written out per setting rather than with `for`
+// over a literal: that model is rebuilt whenever the config changes, which
+// recreated the row under the pointer and cut every drag short.
+component NumRow inherits Rectangle {
+    in property <string> title;
+    in property <string> desc;
+    in property <string> label;
+    in property <bool> line;
+    in property <float> minimum;
+    in property <float> maximum;
+    in property <float> step;
+    in property <float> value;
+    callback changed(float);
+    if root.line: Rectangle { y: 0; height: 1px; background: Palette.line; }
+    VerticalLayout {
+        padding: 14px;
+        spacing: 8px;
+        HorizontalLayout {
+            VerticalLayout {
+                horizontal-stretch: 1;
+                Text { text: root.title; color: Palette.text; font-size: 13.5px; font-weight: 600; }
+                if root.desc != "": Text { text: root.desc; color: Palette.muted; font-size: 12px; }
+            }
+            Text { text: root.label; color: Palette.muted; font-size: 12.5px; }
+        }
+        Slider { minimum: root.minimum; maximum: root.maximum; step: root.step; value: root.value; changed(v) => { root.changed(v); } }
+    }
+}
+
 export component AppWindow inherits Window {
     in property <Cfg> cfg;
     in property <[HotkeyRow]> hotkeys;
@@ -659,26 +688,9 @@ export component AppWindow inherits Window {
                         }
                     }
                     Card {
-                        for s[i] in [
-                            { key: "overlay.intensity", title: I18n.tr("ov.intensity"), desc: "", min: 0.2, max: 2, step: 0.1, value: root.cfg.intensity, pct: false },
-                            { key: "overlay.opacity", title: I18n.tr("ov.opacity"), desc: "", min: 0.3, max: 1, step: 0.05, value: root.cfg.opacity, pct: true },
-                            { key: "overlay.scale", title: I18n.tr("ov.size"), desc: I18n.tr("ov.size.desc"), min: 0.6, max: 2.5, step: 0.05, value: root.cfg.scale, pct: true },
-                        ]: Rectangle {
-                            if i > 0: Rectangle { y: 0; height: 1px; background: Palette.line; }
-                            VerticalLayout {
-                                padding: 14px;
-                                spacing: 8px;
-                                HorizontalLayout {
-                                    VerticalLayout {
-                                        horizontal-stretch: 1;
-                                        Text { text: s.title; color: Palette.text; font-size: 13.5px; font-weight: 600; }
-                                        if s.desc != "": Text { text: s.desc; color: Palette.muted; font-size: 12px; }
-                                    }
-                                    Text { text: s.pct ? round(s.value * 100) + "%" : round(s.value * 10) / 10; color: Palette.muted; font-size: 12.5px; }
-                                }
-                                Slider { minimum: s.min; maximum: s.max; step: s.step; value: s.value; changed(v) => { root.set-num(s.key, v); } }
-                            }
-                        }
+                        NumRow { title: I18n.tr("ov.intensity"); minimum: 0.2; maximum: 2; step: 0.1; value: root.cfg.intensity; label: round(self.value * 10) / 10; changed(v) => { root.set-num("overlay.intensity", v); } }
+                        NumRow { line: true; title: I18n.tr("ov.opacity"); minimum: 0.3; maximum: 1; step: 0.05; value: root.cfg.opacity; label: round(self.value * 100) + "%"; changed(v) => { root.set-num("overlay.opacity", v); } }
+                        NumRow { line: true; title: I18n.tr("ov.size"); desc: I18n.tr("ov.size.desc"); minimum: 0.6; maximum: 2.5; step: 0.05; value: root.cfg.scale; label: round(self.value * 100) + "%"; changed(v) => { root.set-num("overlay.scale", v); } }
                     }
                     HorizontalLayout {
                         spacing: 8px;
@@ -749,21 +761,8 @@ export component AppWindow inherits Window {
                             }
                         }
                         Card {
-                            for s[i] in [
-                                { key: "playback.seekStep", title: I18n.tr("hk.seekStep"), unit: I18n.tr("hk.sec"), min: 1, max: 30, value: root.cfg.seek-step },
-                                { key: "playback.volumeStep", title: I18n.tr("hk.volumeStep"), unit: "%", min: 1, max: 20, value: root.cfg.volume-step },
-                            ]: Rectangle {
-                                if i > 0: Rectangle { y: 0; height: 1px; background: Palette.line; }
-                                VerticalLayout {
-                                    padding: 14px;
-                                    spacing: 8px;
-                                    HorizontalLayout {
-                                        Text { horizontal-stretch: 1; text: s.title; color: Palette.text; font-size: 13.5px; font-weight: 600; }
-                                        Text { text: round(s.value) + " " + s.unit; color: Palette.muted; font-size: 12.5px; }
-                                    }
-                                    Slider { minimum: s.min; maximum: s.max; step: 1; value: s.value; changed(v) => { root.set-num(s.key, v); } }
-                                }
-                            }
+                            NumRow { title: I18n.tr("hk.seekStep"); minimum: 1; maximum: 30; step: 1; value: root.cfg.seek-step; label: round(self.value) + " " + I18n.tr("hk.sec"); changed(v) => { root.set-num("playback.seekStep", v); } }
+                            NumRow { line: true; title: I18n.tr("hk.volumeStep"); minimum: 1; maximum: 20; step: 1; value: root.cfg.volume-step; label: round(self.value) + " %"; changed(v) => { root.set-num("playback.volumeStep", v); } }
                         }
                         Button { icon: @image-url("icons/rotate-ccw.svg"); text: I18n.tr("hk.reset"); clicked => { root.action("resetHotkeys"); } }
                     }

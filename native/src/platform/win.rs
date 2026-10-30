@@ -196,3 +196,161 @@ pub fn other_moa_running() -> bool {
     }
     false
 }
+
+// ---------------------------------------------------------------------------
+// Glow under the overlay
+//
+// The colour key gives the overlay only fully clear or fully solid pixels, so
+// its soft glow lives in a second window right below it: a layered window
+// with real per-pixel alpha, painted here once per shape and faded with the
+// beat through its overall opacity.
+
+struct GlowWin {
+    hwnd: HWND,
+    dc: windows::Win32::Graphics::Gdi::HDC,
+    bitmap: windows::Win32::Graphics::Gdi::HBITMAP,
+    /// Shape the bitmap holds (strength and position left out).
+    shape: Option<super::Glow>,
+    shown: Option<(i32, i32, u8)>,
+}
+
+thread_local! {
+    static GLOW: std::cell::RefCell<Option<GlowWin>> = const { std::cell::RefCell::new(None) };
+    static OVERLAY: std::cell::Cell<Option<isize>> = const { std::cell::Cell::new(None) };
+}
+
+/// Remembers the overlay window the glow sits under.
+pub fn glow_owner(window: &slint::Window) {
+    OVERLAY.with(|o| o.set(hwnd(window).map(|h| h.0 as isize)));
+}
+
+unsafe extern "system" fn glow_proc(h: HWND, msg: u32, w: windows::Win32::Foundation::WPARAM, l: windows::Win32::Foundation::LPARAM) -> windows::Win32::Foundation::LRESULT {
+    unsafe { DefWindowProcW(h, msg, w, l) }
+}
+
+fn create_glow() -> Option<GlowWin> {
+    use windows::Win32::Graphics::Gdi::{CreateCompatibleDC, HBITMAP};
+    use windows::Win32::System::LibraryLoader::GetModuleHandleW;
+    unsafe {
+        let inst = GetModuleHandleW(None).ok()?;
+        let class = windows::core::w!("MoaGlow");
+        let wc = WNDCLASSW { lpfnWndProc: Some(glow_proc), hInstance: inst.into(), lpszClassName: class, ..Default::default() };
+        RegisterClassW(&wc);
+        let hwnd = CreateWindowExW(
+            WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TOPMOST,
+            class,
+            windows::core::w!("Moa Glow"),
+            WS_POPUP,
+            0,
+            0,
+            1,
+            1,
+            None,
+            None,
+            Some(inst.into()),
+            None,
+        )
+        .ok()?;
+        let dc = CreateCompatibleDC(None);
+        Some(GlowWin { hwnd, dc, bitmap: HBITMAP::default(), shape: None, shown: None })
+    }
+}
+
+/// Paints the glow into a premultiplied BGRA bitmap: full colour at the card
+/// edge, fading out over the padding around it.
+fn paint_glow(g: &mut GlowWin, s: &super::Glow) {
+    use windows::Win32::Graphics::Gdi::*;
+    let (w, h) = (s.win.w.max(1), s.win.h.max(1));
+    let info = BITMAPINFO {
+        bmiHeader: BITMAPINFOHEADER {
+            biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+            biWidth: w,
+            biHeight: -h,
+            biPlanes: 1,
+            biBitCount: 32,
+            biCompression: BI_RGB.0,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let mut bits: *mut std::ffi::c_void = std::ptr::null_mut();
+    unsafe {
+        let Ok(bmp) = CreateDIBSection(Some(g.dc), &info, DIB_RGB_COLORS, &mut bits, None, 0) else { return };
+        if bits.is_null() {
+            let _ = DeleteObject(bmp.into());
+            return;
+        }
+        let px = std::slice::from_raw_parts_mut(bits as *mut u32, (w * h) as usize);
+        let c = s.card;
+        let r = s.radius as f32;
+        // Room between the card and the window edge.
+        let reach = (c.x.min(c.y).min(s.win.w - c.x - c.w).min(s.win.h - c.y - c.h)).max(4) as f32;
+        let (cx, cy) = (c.x as f32 + c.w as f32 / 2.0, c.y as f32 + c.h as f32 / 2.0 + reach * 0.1);
+        let (hx, hy) = (c.w as f32 / 2.0 - r, c.h as f32 / 2.0 - r);
+        for y in 0..h {
+            for x in 0..w {
+                // Distance from the card's rounded rectangle.
+                let dx = ((x as f32 + 0.5 - cx).abs() - hx).max(0.0);
+                let dy = ((y as f32 + 0.5 - cy).abs() - hy).max(0.0);
+                let d = ((dx * dx + dy * dy).sqrt() - r).max(0.0);
+                let t = (d / reach).min(1.0);
+                let a = 0.85 * (1.0 - t) * (1.0 - t);
+                let mix = |p: u8, q: u8| p as f32 + (q as f32 - p as f32) * t;
+                let (rr, gg, bb) = (mix(s.c1.0, s.c2.0), mix(s.c1.1, s.c2.1), mix(s.c1.2, s.c2.2));
+                let pa = |v: f32| (v * a).round() as u32;
+                px[(y * w + x) as usize] = ((a * 255.0).round() as u32) << 24 | pa(rr) << 16 | pa(gg) << 8 | pa(bb);
+            }
+        }
+        SelectObject(g.dc, bmp.into());
+        if !g.bitmap.is_invalid() {
+            let _ = DeleteObject(g.bitmap.into());
+        }
+        g.bitmap = bmp;
+    }
+    g.shape = Some(super::Glow { strength: 0.0, win: super::Rect { x: 0, y: 0, ..s.win }, ..*s });
+    g.shown = None;
+}
+
+/// Shows, moves and fades the glow; `None` hides it.
+pub fn set_glow(glow: Option<super::Glow>) {
+    use windows::Win32::Foundation::SIZE;
+    use windows::Win32::Graphics::Gdi::{AC_SRC_ALPHA, AC_SRC_OVER, BLENDFUNCTION};
+    GLOW.with(|cell| {
+        let mut cell = cell.borrow_mut();
+        let Some(s) = glow else {
+            if let Some(g) = cell.as_mut() {
+                if g.shown.take().is_some() {
+                    unsafe {
+                        let _ = ShowWindow(g.hwnd, SW_HIDE);
+                    }
+                }
+            }
+            return;
+        };
+        if cell.is_none() {
+            *cell = create_glow();
+        }
+        let Some(g) = cell.as_mut() else { return };
+        let shape = super::Glow { strength: 0.0, win: super::Rect { x: 0, y: 0, ..s.win }, ..s };
+        if g.shape != Some(shape) {
+            paint_glow(g, &s);
+        }
+        let alpha = (s.strength.clamp(0.0, 1.0) * 255.0).round() as u8;
+        let was_hidden = g.shown.is_none();
+        if g.shown == Some((s.win.x, s.win.y, alpha)) {
+            return;
+        }
+        g.shown = Some((s.win.x, s.win.y, alpha));
+        let blend = BLENDFUNCTION { BlendOp: AC_SRC_OVER as u8, BlendFlags: 0, SourceConstantAlpha: alpha, AlphaFormat: AC_SRC_ALPHA as u8 };
+        let dst = POINT { x: s.win.x, y: s.win.y };
+        let size = SIZE { cx: s.win.w, cy: s.win.h };
+        let src = POINT::default();
+        unsafe {
+            let _ = UpdateLayeredWindow(g.hwnd, None, Some(&dst), Some(&size), Some(g.dc), Some(&src), COLORREF(0), Some(&blend), ULW_ALPHA);
+            // Just under the overlay, above everything else.
+            let after = OVERLAY.with(|o| o.get()).map(|h| HWND(h as *mut _)).unwrap_or(HWND_TOPMOST);
+            let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER;
+            let _ = SetWindowPos(g.hwnd, Some(after), 0, 0, 0, 0, if was_hidden { flags | SWP_SHOWWINDOW } else { flags });
+        }
+    });
+}

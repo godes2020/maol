@@ -25,6 +25,11 @@ Native rewrite of Moa in Rust + Slint 1.18 (`native/`). The Electron 0.3.1 app i
    - Hotkeys: failed ones are retried every 5 s; the message names the old Moa 0.3 when `Moa.exe` is running.
    - Pixel-art mark snapped to whole pixels; icon-only buttons centre the icon exactly.
 
+8. Second round:
+   - Glow: a colour-keyed window can't hold soft alpha, so the glow is a separate layered window ("MoaGlow", `platform::win::set_glow`) kept just below the overlay. Its premultiplied bitmap is painted once per card shape; per-frame strength goes through `SourceConstantAlpha`. `App::sync_glow` feeds it the card rect, colours and beat.
+   - YouTube Music volume goes through `#movie_player` (`setVolume`/`getVolume`/`mute`) and the page's own slider; setting `video.volume` was undone by its loudness normalisation. Other sites get the Moa volume re-applied on every `play()`.
+   - Sliders: `for` over an array literal that reads `cfg` rebuilt the rows on every change and cut the drag short, so settings sliders are written out as `NumRow`. `Slider` keeps its own drag value instead of assigning `value`, which broke the parent's binding. The overlay seek bar drags too.
+
 ## Next steps
 - Wait for user feedback on 0.5.0. The built-in player and Spotify were not tested by hand on Windows: CI only checks that the app starts.
 - Spotify is sign-in only for now. Next: playlists and playback control through the Web API (`user-modify-playback-state` is already in the scopes).

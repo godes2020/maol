@@ -71,10 +71,13 @@ component Eq inherits Rectangle {
     }
 }
 
-// Seek bar; clicking jumps there.
+// Seek bar; click or drag, the track jumps there on release.
 component SeekBar inherits Rectangle {
     in property <length> u;
     in property <bool> knob: true;
+    property <float> drag;
+    property <bool> dragging;
+    property <float> shown: dragging ? drag : Track.progress;
     height: 14 * u;
     Rectangle {
         y: (parent.height - 3 * u) / 2;
@@ -85,13 +88,13 @@ component SeekBar inherits Rectangle {
     Rectangle {
         x: 0;
         y: (parent.height - 3 * u) / 2;
-        width: parent.width * Track.progress;
+        width: parent.width * root.shown;
         height: 3 * u;
         border-radius: 2 * u;
         background: white;
     }
     if knob: Rectangle {
-        x: parent.width * Track.progress - self.width / 2;
+        x: parent.width * root.shown - self.width / 2;
         y: (parent.height - self.height) / 2;
         width: (ta.has-hover ? 13 : 10) * u;
         height: self.width;
@@ -103,7 +106,18 @@ component SeekBar inherits Rectangle {
     }
     ta := TouchArea {
         mouse-cursor: pointer;
-        clicked => { if (Track.can-seek) { Track.seek-to(max(0, min(1, self.mouse-x / self.width))); } }
+        pointer-event(e) => {
+            if (!Track.can-seek) { return; }
+            if (e.kind == PointerEventKind.down) {
+                root.drag = max(0, min(1, self.mouse-x / self.width));
+                root.dragging = true;
+            }
+            if (e.kind == PointerEventKind.up && root.dragging) {
+                root.dragging = false;
+                Track.seek-to(root.drag);
+            }
+        }
+        moved => { if (self.pressed && root.dragging) { root.drag = max(0, min(1, self.mouse-x / self.width)); } }
     }
 }
 
