@@ -20,7 +20,7 @@ Settings carry over from Moa 0.3.1 (`%APPDATA%\Moa`). The installer closes Moa, 
 
 ## Fixed in this build / Исправлено в этой сборке
 
-- The overlay no longer turns into a black box after a while: the window keeps its transparency when Windows resets its style · Оверлей больше не превращается в чёрный прямоугольник через какое-то время: окно не теряет прозрачность, когда Windows сбрасывает его стиль
+- The overlay no longer turns into a black box after a while: the window keeps its transparency when Windows resets its style, and is fully repainted when Windows throws its pixels away · Оверлей больше не превращается в чёрный прямоугольник: окно не теряет прозрачность, когда Windows сбрасывает его стиль, и полностью перерисовывается, когда Windows стирает его содержимое
 - Moa's volume in the built-in player changes YouTube Music's own volume, so it no longer jumps back after a few seconds; other services keep the volume across tracks · Громкость из Moa во встроенном плеере меняет собственную громкость YouTube Music и больше не возвращается через несколько секунд; в других сервисах она сохраняется между треками
 - Sliders in settings and the player can be dragged, not only clicked · Ползунки в настройках и плеере теперь перетаскиваются, а не только нажимаются
 - An installer that removes the old Moa first · Установщик, который сначала удаляет старую Moa

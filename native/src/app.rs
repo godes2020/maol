@@ -384,6 +384,10 @@ impl App {
         self.update_click_through();
     }
 
+    fn repaint_overlay(&self) {
+        self.overlay.set_repaint(self.overlay.get_repaint().wrapping_add(1));
+    }
+
     fn update_overlay_visibility(&self) {
         let (visible, hide_idle) = {
             let c = self.cfg.borrow();
@@ -395,6 +399,7 @@ impl App {
         if show && !w.is_visible() {
             let _ = w.show();
             platform::prepare_overlay(w);
+            self.repaint_overlay();
             self.click_through.set(false);
             self.update_click_through();
         } else if !show && w.is_visible() {
@@ -527,11 +532,17 @@ impl App {
 
         let w = Rc::downgrade(self);
         let pointer = Timer::default();
+        let ticks = Cell::new(0u32);
         pointer.start(TimerMode::Repeated, Duration::from_millis(60), move || {
             if let Some(app) = w.upgrade() {
                 app.tick_hover();
                 if app.overlay.window().is_visible() {
-                    platform::ensure_overlay_style(app.overlay.window());
+                    // A full repaint now and then too: Windows can drop the
+                    // layered window's pixels without touching its style.
+                    ticks.set(ticks.get().wrapping_add(1));
+                    if platform::ensure_overlay_style(app.overlay.window()) || ticks.get() % 8 == 0 {
+                        app.repaint_overlay();
+                    }
                 }
                 // Moved by dragging in edit mode.
                 let p = app.overlay.window().position();

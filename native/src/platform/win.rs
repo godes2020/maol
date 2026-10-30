@@ -97,7 +97,8 @@ fn wanted_ex(ex: isize) -> isize {
 /// WS_EX_LAYERED and with it the colour key: the overlay turned black. The
 /// overlay's window procedure now vetoes that (`overlay_proc`); this puts
 /// the styles and the key back should they still go missing.
-fn apply_style(h: HWND) {
+fn apply_style(h: HWND) -> bool {
+    let mut fixed = false;
     unsafe {
         let ex = GetWindowLongPtrW(h, GWL_EXSTYLE);
         let want = wanted_ex(ex);
@@ -111,9 +112,11 @@ fn apply_style(h: HWND) {
                 let _ = SetLayeredWindowAttributes(h, KEY, 255, LWA_COLORKEY);
                 use windows::Win32::Graphics::Gdi::{RedrawWindow, RDW_ALLCHILDREN, RDW_FRAME, RDW_INVALIDATE};
                 let _ = RedrawWindow(Some(h), None, None, RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN);
+                fixed = true;
             }
         }
     }
+    fixed
 }
 
 static OLD_PROC: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
@@ -140,17 +143,17 @@ fn guard_style(h: HWND) {
 }
 
 /// Called often (every pointer check) so a lost colour key never lasts.
-pub fn ensure_overlay_style(window: &slint::Window) {
-    if let Some(h) = hwnd(window) {
-        apply_style(h);
-    }
+/// True when the style or key had to be put back: the window must then be
+/// repainted in full.
+pub fn ensure_overlay_style(window: &slint::Window) -> bool {
+    hwnd(window).map(apply_style).unwrap_or(false)
 }
 
 /// Games that go borderless-fullscreen can push other topmost windows down;
 /// called now and then to stay above them.
 pub fn keep_on_top(window: &slint::Window) {
     if let Some(h) = hwnd(window) {
-        apply_style(h);
+        let _ = apply_style(h);
         unsafe {
             let _ = SetWindowPos(h, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
         }

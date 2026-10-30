@@ -51,4 +51,6 @@ pub fn other_moa_running() -> bool {
     false
 }
 
-pub fn ensure_overlay_style(_window: &slint::Window) {}
+pub fn ensure_overlay_style(_window: &slint::Window) -> bool {
+    false
+}

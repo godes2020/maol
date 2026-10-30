@@ -186,6 +186,11 @@ export component Overlay inherits Window {
     // Windows cuts this colour out of the window (its windows get no alpha
     // from our renderers), so soft glows that would bleed into it are left off.
     in property <bool> keyed;
+    // Bumped by Moa to repaint the whole window. Windows throws away the
+    // pixels of a layered window when it is shown again or its style is
+    // reset; the renderer only redraws what changed, so the rest stayed
+    // black instead of the key colour.
+    in property <int> repaint;
 
     callback drag();
     callback grip(bool);
@@ -194,6 +199,15 @@ export component Overlay inherits Window {
     always-on-top: true;
     background: keyed ? #010203 : transparent;
     title: "Moa Overlay";
+
+    if root.keyed: Rectangle {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.height;
+        // Reads `repaint` so bumping it marks the whole window dirty.
+        background: root.repaint == -1 ? #010204 : #010203;
+    }
 
     property <length> u: 1px * scale;
     property <length> pad: 18 * u;
