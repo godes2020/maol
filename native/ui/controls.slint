@@ -234,7 +234,7 @@ export component Label inherits VerticalLayout {
 // Scrollable page with a slim custom scrollbar.
 export component Page inherits Rectangle {
     fl := Flickable {
-        viewport-width: self.width;
+        content-width: self.width;
         @children
     }
     if fl.content-height > root.height + 1px: Rectangle {

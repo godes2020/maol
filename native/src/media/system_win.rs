@@ -497,9 +497,9 @@ impl VolumeCache {
         let next = absolute.unwrap_or(cur + delta.unwrap_or(0.0)).clamp(0.0, 1.0) as f32;
         for v in &s {
             unsafe {
-                let _ = v.volume.SetMasterVolume(next, None);
+                let _ = v.volume.SetMasterVolume(next, std::ptr::null());
                 if next > 0.0 {
-                    let _ = v.volume.SetMute(false, None);
+                    let _ = v.volume.SetMute(false, std::ptr::null());
                 }
             }
         }
@@ -513,7 +513,7 @@ impl VolumeCache {
         let muted = unsafe { first.volume.GetMute().map(|b| b.as_bool()).unwrap_or(false) };
         for v in &s {
             unsafe {
-                let _ = v.volume.SetMute(!muted, None);
+                let _ = v.volume.SetMute(!muted, std::ptr::null());
             }
         }
         self.at = None;
