@@ -8,8 +8,9 @@
   const els = {
     art: $('art'), bgArt: $('bgArt'),
     title: $('title'), artist: $('artist'), toast: $('toast'),
-    cur: $('cur'), rem: $('rem'), bar: $('bar'), repeatBtn: $('repeatBtn'),
-    eqs: [$('eqCompact'), $('eqFull')]
+    cur: $('cur'), rem: $('rem'),
+    repeats: [...document.querySelectorAll('.btn.repeat')],
+    eqs: [...document.querySelectorAll('.btn.eq')]
   };
   const bars = [...document.querySelectorAll('.bars')].map((b) => [...b.children]);
 
@@ -21,7 +22,6 @@
 
   // ---------------- i18n ----------------
   document.querySelectorAll('[data-tip]').forEach((el) => { el.title = t(el.dataset.tip); });
-  $('editHint').textContent = t('overlay.editHint');
   $('editDone').textContent = t('overlay.editDone');
 
   // ---------------- Helpers ----------------
@@ -35,8 +35,11 @@
 
   function setExpanded() {
     const on = editing || hovering || cfg.alwaysExpanded;
-    card.classList.toggle('expanded', on);
-    card.classList.toggle('compact', !on);
+    // "Cover only" never unfolds; it shows controls on top of the cover.
+    const cover = cfg.layout === 'cover';
+    card.classList.toggle('hot', cover && on);
+    card.classList.toggle('expanded', !cover && on);
+    card.classList.toggle('compact', cover || !on);
   }
 
   function setTitle(text) {
@@ -124,8 +127,12 @@
     els.artist.textContent = idle ? t('overlay.idleArtist') : s.artist;
     els.eqs.forEach((b) => b.classList.toggle('muted', Boolean(s && (s.muted || s.volume === 0))));
     const r = ((s && s.repeat) || 'NONE').toLowerCase();
-    els.repeatBtn.className = `btn repeat r-${r}`;
+    els.repeats.forEach((b) => {
+      b.classList.remove('r-none', 'r-all', 'r-one');
+      b.classList.add(`r-${r}`);
+    });
     renderProgress();
+    updateLoopback();
   }
 
   function currentTime() {
@@ -142,6 +149,93 @@
     root.setProperty('--progress', p.toFixed(4));
     els.cur.textContent = fmt(cur);
     els.rem.textContent = `-${fmt(dur - cur)}`;
+  }
+
+  // ---------------- Listening to the sound output ----------------
+  // With the system source there is no page to analyse, so the overlay
+  // listens to what Windows plays (loopback) while music is playing, and
+  // releases it a few seconds after the music stops.
+  const loop = { ctx: null, stream: null, analyser: null, freq: null, timer: 0, stopTimer: 0, starting: false, bassAvg: 0, lastBeat: 0, gaps: [] };
+
+  async function startLoopback() {
+    if (loop.ctx || loop.starting || !navigator.mediaDevices) return;
+    loop.starting = true;
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
+      stream.getVideoTracks().forEach((tr) => {
+        tr.stop();
+        stream.removeTrack(tr);
+      });
+      if (!stream.getAudioTracks().length || !(cfg.loopback && state && state.playing)) {
+        stream.getTracks().forEach((tr) => tr.stop());
+        return;
+      }
+      const ctx = new AudioContext();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.6;
+      ctx.createMediaStreamSource(stream).connect(analyser);
+      Object.assign(loop, { ctx, stream, analyser, freq: new Uint8Array(analyser.frequencyBinCount) });
+      loop.timer = setInterval(analyseLoopback, 33);
+    } catch {
+      // No loopback device: the glow simply follows nothing.
+    } finally {
+      loop.starting = false;
+    }
+  }
+
+  function stopLoopback() {
+    clearInterval(loop.timer);
+    if (loop.stream) loop.stream.getTracks().forEach((tr) => tr.stop());
+    if (loop.ctx) loop.ctx.close().catch(() => {});
+    Object.assign(loop, { ctx: null, stream: null, analyser: null, freq: null, timer: 0, gaps: [] });
+    applyAudio({ energy: 0, bass: 0, bands: [0, 0, 0, 0, 0] });
+  }
+
+  function updateLoopback() {
+    const want = cfg.loopback && state && state.playing;
+    if (want) {
+      clearTimeout(loop.stopTimer);
+      loop.stopTimer = 0;
+      startLoopback();
+    } else if ((loop.ctx || loop.starting) && !loop.stopTimer) {
+      loop.stopTimer = setTimeout(() => {
+        loop.stopTimer = 0;
+        stopLoopback();
+      }, cfg.loopback ? 4000 : 0);
+    }
+  }
+
+  function analyseLoopback() {
+    const { analyser, freq, ctx } = loop;
+    if (!analyser) return;
+    analyser.getByteFrequencyData(freq);
+    const binHz = ctx.sampleRate / analyser.fftSize;
+    const bin = (hz) => Math.max(1, Math.round(hz / binHz));
+    const avg = (from, to) => {
+      let sum = 0;
+      for (let i = from; i < to; i++) sum += freq[i];
+      return sum / ((to - from) * 255);
+    };
+    const bass = avg(bin(40), bin(160));
+    const energy = avg(bin(40), bin(8000));
+    const edges = [40, 160, 500, 1500, 4000, 10000];
+    const bands = [];
+    for (let i = 0; i < edges.length - 1; i++) bands.push(avg(bin(edges[i]), bin(edges[i + 1])));
+    const now = performance.now();
+    let beat = false;
+    if (bass > loop.bassAvg * 1.25 && bass > 0.3 && now - loop.lastBeat > 280) {
+      beat = true;
+      if (loop.lastBeat && now - loop.lastBeat < 1500) {
+        loop.gaps.push(now - loop.lastBeat);
+        if (loop.gaps.length > 12) loop.gaps.shift();
+      }
+      loop.lastBeat = now;
+    }
+    loop.bassAvg = loop.bassAvg * 0.92 + bass * 0.08;
+    const sorted = [...loop.gaps].sort((a, b) => a - b);
+    const bpm = sorted.length >= 4 ? Math.round(60000 / sorted[sorted.length >> 1]) : 0;
+    applyAudio({ energy, bass, beat, bands, bpm });
   }
 
   // ---------------- Audio reactivity ----------------
@@ -170,7 +264,15 @@
   // Frame-rate independent exponential easing.
   const ease = (from, to, rate, dt) => from + (to - from) * (1 - Math.exp(-rate * dt));
 
+  // ~30 fps is plenty for a soft glow and halves the work; with nothing
+  // playing and the glow faded out the loop idles at 4 checks a second.
+  function schedule(idle) {
+    if (idle) setTimeout(() => requestAnimationFrame(frame), 250);
+    else requestAnimationFrame(frame);
+  }
+
   function frame(now) {
+    if (now - lastFrame < 30) return schedule(false);
     const dt = Math.min(0.1, (now - lastFrame) / 1000);
     lastFrame = now;
     const playing = state && state.playing && !card.classList.contains('idle');
@@ -194,7 +296,8 @@
     for (const group of bars) {
       group.forEach((el, i) => el.style.setProperty('--h', shown.bands[i].toFixed(3)));
     }
-    requestAnimationFrame(frame);
+    const still = !playing && shown.energy < 0.002 && shown.pulse < 0.002 && shown.bands.every((v) => v < 0.002);
+    schedule(still);
   }
   requestAnimationFrame(frame);
 
@@ -206,6 +309,13 @@
     document.body.classList.toggle('layout-cover', cfg.layout === 'cover');
     card.classList.toggle('static', !cfg.reactive);
     setExpanded();
+    updateLoopback();
+  }
+
+  function applyLayout(l) {
+    document.body.classList.toggle('side-right', Boolean(l.coverRight));
+    document.body.classList.toggle('anchor-right', Boolean(l.right));
+    document.body.classList.toggle('anchor-bottom', Boolean(l.bottom));
   }
 
   function setEdit(on) {
@@ -235,15 +345,30 @@
     });
   });
 
-  els.bar.addEventListener('click', (e) => {
-    if (!state || !state.duration) return;
-    const r = els.bar.getBoundingClientRect();
-    const ratio = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
-    command('seekTo', ratio * state.duration);
-    state.currentTime = ratio * state.duration;
-    stateAt = performance.now();
-    renderProgress();
+  document.querySelectorAll('[data-seek]').forEach((bar) => {
+    bar.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!state || !state.duration) return;
+      const r = bar.getBoundingClientRect();
+      const ratio = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+      command('seekTo', ratio * state.duration);
+      state.currentTime = ratio * state.duration;
+      stateAt = performance.now();
+      renderProgress();
+    });
   });
+
+  // Resize grip: the main process follows the cursor until the button is released.
+  const grip = $('grip');
+  grip.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    grip.setPointerCapture(e.pointerId);
+    if (window.moa) window.moa.resize(true);
+  });
+  const endResize = () => window.moa && window.moa.resize(false);
+  grip.addEventListener('pointerup', endResize);
+  grip.addEventListener('lostpointercapture', endResize);
 
   card.addEventListener('mouseenter', () => {
     // A locked overlay ignores the mouse entirely so it never gets in the way in games.
@@ -268,6 +393,7 @@
     window.moa.onConfig(applyConfig);
     window.moa.onEditMode(setEdit);
     window.moa.onToast(showToast);
+    window.moa.onLayout(applyLayout);
     applyState(null);
     window.moa.ready();
   } else {
@@ -288,7 +414,9 @@
       repeat: params.get('repeat') || 'NONE'
     };
     applyConfig({ alwaysExpanded: params.has('expanded'), layout: params.get('layout') || 'card', reactive: true, intensity: 1, opacity: 1 });
+    applyLayout({ coverRight: params.get('side') === 'right', right: params.get('side') === 'right', bottom: params.has('bottom') });
     if (params.has('edit')) setEdit(true);
+    if (params.has('hot')) { hovering = true; setExpanded(); }
     applyState(demo);
     if (!params.has('idle')) setArt(params.get('art') || '../../docs/media/demo-cover.png');
     if (params.has('toast')) showToast(params.get('toast'));

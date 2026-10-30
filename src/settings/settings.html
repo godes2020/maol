@@ -3,110 +3,194 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
-  <title>Moa — Settings</title>
+  <title>Moa</title>
   <link rel="stylesheet" href="settings.css">
 </head>
 <body>
-  <header>
+  <div class="ambient" aria-hidden="true"><div class="ambient-art" id="ambientArt"></div></div>
+
+  <header class="titlebar">
     <img src="../../assets/icon.png" alt="" class="logo">
-    <div>
-      <h1>Moa</h1>
-      <p class="sub">Music Overlay App · <span data-i18n="settings.version"></span> <span id="version"></span></p>
-    </div>
+    <span class="brand">Moa</span>
+    <span class="grow"></span>
+    <button class="win" id="winMin" data-icon="minus" data-tip="app.minimize"></button>
+    <button class="win close" id="winClose" data-icon="x" data-tip="app.close"></button>
   </header>
 
-  <nav id="tabs">
-    <button data-tab="connect" class="active" data-i18n="settings.connect"></button>
-    <button data-tab="hotkeys" data-i18n="settings.hotkeys"></button>
-    <button data-tab="overlay" data-i18n="settings.overlay"></button>
-    <button data-tab="playback" data-i18n="settings.playback"></button>
-    <button data-tab="general" data-i18n="settings.general"></button>
-  </nav>
+  <main id="scroller">
+    <!-- ================= Home ================= -->
+    <section id="tab-home" class="tab active">
+      <div class="np" id="nowPlaying">
+        <div class="np-cover">
+          <div class="np-glow"></div>
+          <img id="npArt" alt="">
+          <div class="np-empty" id="npEmpty">
+            <svg viewBox="0 0 5 5" shape-rendering="crispEdges"><path d="M2 0h3v1H2zM1 1h1v1H1zM4 1h1v1H4zM0 2h1v3H0zM2 2h1v1H2zM4 2h1v1H4zM3 3h1v1H3zM1 4h2v1H1z"/></svg>
+          </div>
+        </div>
+        <div class="np-meta">
+          <div class="np-title" id="npTitle"></div>
+          <div class="np-artist" id="npArtist"></div>
+          <div class="np-source" id="npSource"></div>
+        </div>
 
-  <main>
-    <section id="tab-connect" class="tab active">
-      <label class="row select stack">
-        <span class="text"><b data-i18n="settings.source"></b><small data-i18n="settings.source.desc"></small></span>
-        <select data-path="general.source">
-          <option value="browser" data-i18n="settings.sourceBrowser"></option>
-          <option value="app" data-i18n="settings.sourceApp"></option>
-        </select>
-      </label>
+        <div class="np-player" id="npPlayer">
+          <div class="seek">
+            <input type="range" class="slider" id="npSeek" min="0" max="1000" value="0">
+            <div class="times"><span id="npCur">0:00</span><span id="npDur">0:00</span></div>
+          </div>
+          <div class="transport">
+            <button class="ctl" data-cmd="cycleRepeat" id="npRepeat" data-tip="overlay.repeat"><span data-icon="repeat"></span></button>
+            <button class="ctl" data-cmd="previous" data-tip="overlay.prev"><span data-icon="skip-back"></span></button>
+            <button class="ctl big" data-cmd="playPause" id="npPlay" data-tip="overlay.playPause"><span data-icon="play" class="i-play"></span><span data-icon="pause" class="i-pause"></span></button>
+            <button class="ctl" data-cmd="next" data-tip="overlay.next"><span data-icon="skip-forward"></span></button>
+            <button class="ctl" data-cmd="toggleMute" id="npMute" data-tip="overlay.mute"><span data-icon="volume-2" class="i-vol"></span><span data-icon="volume-x" class="i-muted"></span></button>
+          </div>
+          <div class="volume" id="npVolume">
+            <span data-icon="volume-2"></span>
+            <input type="range" class="slider" id="npVol" min="0" max="100" value="50">
+          </div>
+        </div>
 
-      <div id="browserMode">
-        <div id="status" class="status"><span class="dot"></span><span id="statusText"></span></div>
-        <ol class="steps">
-          <li><span data-i18n="settings.step1"></span> <button id="openExtFolder" class="ghost small" data-i18n="settings.step1Btn"></button>
-            <code id="extDir" class="path"></code></li>
-          <li id="step2"></li>
-          <li><span data-i18n="settings.step3"></span> <button id="openYtm" class="ghost small" data-i18n="settings.step3Btn"></button></li>
-        </ol>
-        <p class="hint" data-i18n="settings.stepDone"></p>
-        <p><a href="#" id="openGuide" data-i18n="settings.guide"></a></p>
-      </div>
-
-      <div id="appMode" class="msg" data-i18n="settings.appNote"></div>
-    </section>
-
-    <section id="tab-hotkeys" class="tab">
-      <p class="hint" data-i18n="settings.hotkeysHint"></p>
-      <div id="hotkeyMsg" class="msg" hidden></div>
-      <div id="hotkeyList" class="list"></div>
-      <button id="resetHotkeys" class="ghost" data-i18n="settings.resetHotkeys"></button>
-    </section>
-
-    <section id="tab-overlay" class="tab">
-      <label class="row switch"><span class="text"><b data-i18n="settings.overlayVisible"></b><small data-i18n="settings.overlayVisible.desc"></small></span><input type="checkbox" data-path="overlay.visible"><i></i></label>
-      <label class="row select stack"><span class="text"><b data-i18n="settings.overlayLayout"></b><small data-i18n="settings.overlayLayout.desc"></small></span>
-        <select data-path="overlay.layout">
-          <option value="card" data-i18n="settings.layoutCard"></option>
-          <option value="cover" data-i18n="settings.layoutCover"></option>
-        </select>
-      </label>
-      <label class="row select stack"><span class="text"><b data-i18n="settings.overlayInteraction"></b><small data-i18n="settings.overlayInteraction.desc"></small></span>
-        <select data-path="overlay.interaction">
-          <option value="locked" data-i18n="settings.interactionLocked"></option>
-          <option value="hover" data-i18n="settings.interactionHover"></option>
-        </select>
-      </label>
-      <label class="row switch"><span class="text"><b data-i18n="settings.overlayAlwaysExpanded"></b><small data-i18n="settings.overlayAlwaysExpanded.desc"></small></span><input type="checkbox" data-path="overlay.alwaysExpanded"><i></i></label>
-      <label class="row switch"><span class="text"><b data-i18n="settings.overlayHideWhenIdle"></b><small data-i18n="settings.overlayHideWhenIdle.desc"></small></span><input type="checkbox" data-path="overlay.hideWhenIdle"><i></i></label>
-      <label class="row switch"><span class="text"><b data-i18n="settings.overlayReactive"></b><small data-i18n="settings.overlayReactive.desc"></small></span><input type="checkbox" data-path="overlay.reactive"><i></i></label>
-      <label class="row range"><span class="text"><b data-i18n="settings.overlayIntensity"></b><small data-i18n="settings.overlayIntensity.desc"></small></span><input type="range" min="0.2" max="2" step="0.1" data-path="overlay.intensity"><output></output></label>
-      <label class="row range"><span class="text"><b data-i18n="settings.overlayOpacity"></b><small data-i18n="settings.overlayOpacity.desc"></small></span><input type="range" min="0.3" max="1" step="0.05" data-path="overlay.opacity" data-format="percent"><output></output></label>
-      <label class="row range"><span class="text"><b data-i18n="settings.overlayScale"></b><small data-i18n="settings.overlayScale.desc"></small></span><input type="range" min="0.7" max="1.6" step="0.05" data-path="overlay.scale" data-format="percent"><output></output></label>
-      <div class="row stack">
-        <span class="text"><b data-i18n="settings.overlayMove"></b><small data-i18n="settings.overlayMove.desc"></small></span>
-        <div class="buttons">
-          <button id="moveOverlay" data-i18n="settings.overlayMove"></button>
-          <button id="resetOverlay" class="ghost" data-i18n="settings.overlayReset"></button>
+        <div class="np-idle" id="npIdle">
+          <p class="lead" data-i18n="home.idle"></p>
+          <div class="platforms" id="platforms"></div>
+          <p class="hint" data-i18n="home.idleHint"></p>
         </div>
       </div>
-      <div class="note"><b data-i18n="settings.fullscreenTitle"></b><p data-i18n="settings.fullscreenNote"></p></div>
+
+      <div class="quick">
+        <button class="chip" id="qOverlay" data-icon-left="eye"><span data-i18n="quick.overlay"></span></button>
+        <button class="chip" id="qMove" data-icon-left="move"><span data-i18n="quick.move"></span></button>
+        <button class="chip" id="qLock" data-icon-left="lock"><span data-i18n="quick.lock"></span></button>
+        <button class="chip" id="qLayout" data-icon-left="square"><span id="qLayoutText"></span></button>
+      </div>
+
+      <div class="status" id="status"><span class="dot"></span><span id="statusText"></span></div>
     </section>
 
-    <section id="tab-playback" class="tab">
-      <label class="row range"><span class="text"><b data-i18n="settings.seekStep"></b><small data-i18n="settings.seekStep.desc"></small></span><input type="range" min="1" max="30" step="1" data-path="playback.seekStep"><output></output></label>
-      <label class="row range"><span class="text"><b data-i18n="settings.volumeStep"></b><small data-i18n="settings.volumeStep.desc"></small></span><input type="range" min="1" max="20" step="1" data-path="playback.volumeStep"><output></output></label>
+    <!-- ================= Overlay ================= -->
+    <section id="tab-overlay" class="tab">
+      <h2 data-i18n="nav.overlay"></h2>
+
+      <div class="group">
+        <div class="label"><b data-i18n="ov.style"></b></div>
+        <div class="tiles" data-path="overlay.layout">
+          <button data-value="card"><div class="mini mini-card"><i></i><span></span></div><b data-i18n="ov.card"></b></button>
+          <button data-value="cover"><div class="mini mini-cover"><i></i></div><b data-i18n="ov.cover"></b></button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="label"><b data-i18n="ov.side"></b><small data-i18n="ov.side.desc"></small></div>
+        <div class="seg" data-path="overlay.side">
+          <button data-value="auto"><span data-icon="sparkles"></span><span data-i18n="ov.auto"></span></button>
+          <button data-value="left"><span data-i18n="ov.left"></span></button>
+          <button data-value="right"><span data-i18n="ov.right"></span></button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="label"><b data-i18n="ov.mouse"></b><small data-i18n="ov.mouse.desc"></small></div>
+        <div class="seg" data-path="overlay.interaction">
+          <button data-value="locked"><span data-icon="lock"></span><span data-i18n="ov.locked"></span></button>
+          <button data-value="hover"><span data-icon="lock-open"></span><span data-i18n="ov.hover"></span></button>
+        </div>
+      </div>
+
+      <div class="card-list">
+        <label class="row"><span data-icon="eye" class="row-ic"></span><span class="text"><b data-i18n="ov.visible"></b><small data-i18n="ov.visible.desc"></small></span><input type="checkbox" class="switch" data-path="overlay.visible"></label>
+        <label class="row"><span data-icon="rectangle-horizontal" class="row-ic"></span><span class="text"><b data-i18n="ov.expanded"></b><small data-i18n="ov.expanded.desc"></small></span><input type="checkbox" class="switch" data-path="overlay.alwaysExpanded"></label>
+        <label class="row"><span data-icon="eye-off" class="row-ic"></span><span class="text"><b data-i18n="ov.hideIdle"></b><small data-i18n="ov.hideIdle.desc"></small></span><input type="checkbox" class="switch" data-path="overlay.hideWhenIdle"></label>
+        <label class="row"><span data-icon="sparkles" class="row-ic"></span><span class="text"><b data-i18n="ov.glow"></b><small data-i18n="ov.glow.desc"></small></span><input type="checkbox" class="switch" data-path="overlay.reactive"></label>
+      </div>
+
+      <div class="card-list">
+        <label class="row range"><span class="text"><b data-i18n="ov.intensity"></b></span><output></output><input type="range" class="slider" min="0.2" max="2" step="0.1" data-path="overlay.intensity"></label>
+        <label class="row range"><span class="text"><b data-i18n="ov.opacity"></b></span><output></output><input type="range" class="slider" min="0.3" max="1" step="0.05" data-path="overlay.opacity" data-format="percent"></label>
+        <label class="row range"><span class="text"><b data-i18n="ov.size"></b><small data-i18n="ov.size.desc"></small></span><output></output><input type="range" class="slider" min="0.6" max="2.5" step="0.05" data-path="overlay.scale" data-format="percent"></label>
+      </div>
+
+      <div class="buttons">
+        <button class="btn primary" id="moveOverlay"><span data-icon="move"></span><span data-i18n="ov.move"></span></button>
+        <button class="btn" id="resetOverlay"><span data-icon="rotate-ccw"></span><span data-i18n="ov.reset"></span></button>
+      </div>
+
+      <details class="note">
+        <summary><span data-icon="monitor"></span><span data-i18n="ov.fullscreen"></span></summary>
+        <p data-i18n="ov.fullscreen.desc"></p>
+      </details>
     </section>
 
-    <section id="tab-general" class="tab">
-      <label class="row select stack"><span class="text"><b data-i18n="settings.language"></b><small data-i18n="settings.language.desc"></small></span>
-        <select data-path="general.language">
-          <option value="auto" data-i18n="settings.languageAuto"></option>
-          <option value="en">English</option>
-          <option value="ru">Русский</option>
-        </select>
-      </label>
-      <p class="hint small" data-i18n="settings.restartNote"></p>
-      <label class="row switch"><span class="text"><b data-i18n="settings.autostart"></b><small data-i18n="settings.autostart.desc"></small></span><input type="checkbox" data-path="general.autostart"><i></i></label>
-      <label class="row switch"><span class="text"><b data-i18n="settings.closeToTray"></b><small data-i18n="settings.closeToTray.desc"></small></span><input type="checkbox" data-path="general.closeToTray"><i></i></label>
-      <label class="row switch"><span class="text"><b data-i18n="settings.showWindow"></b><small data-i18n="settings.showWindow.desc"></small></span><input type="checkbox" data-path="general.showWindow"><i></i></label>
-      <p class="footer"><a href="https://github.com/godes2020/maol" target="_blank">github.com/godes2020/maol</a></p>
+    <!-- ================= Hotkeys ================= -->
+    <section id="tab-hotkeys" class="tab">
+      <h2 data-i18n="nav.hotkeys"></h2>
+      <p class="hint" data-i18n="hk.hint"></p>
+      <div id="hotkeyMsg" class="msg" hidden></div>
+      <div id="hotkeyList" class="card-list hk-list"></div>
+
+      <div class="card-list">
+        <label class="row range"><span class="text"><b data-i18n="hk.seekStep"></b></span><output></output><input type="range" class="slider" min="1" max="30" step="1" data-path="playback.seekStep" data-format="sec"></label>
+        <label class="row range"><span class="text"><b data-i18n="hk.volumeStep"></b></span><output></output><input type="range" class="slider" min="1" max="20" step="1" data-path="playback.volumeStep" data-format="pct"></label>
+      </div>
+      <div class="buttons"><button class="btn" id="resetHotkeys"><span data-icon="rotate-ccw"></span><span data-i18n="hk.reset"></span></button></div>
+    </section>
+
+    <!-- ================= Settings ================= -->
+    <section id="tab-settings" class="tab">
+      <h2 data-i18n="nav.settings"></h2>
+
+      <div class="group">
+        <div class="label"><b data-i18n="src.title"></b></div>
+        <div class="tiles col" data-path="general.source">
+          <button data-value="system"><span data-icon="sparkles" class="tile-ic"></span><span class="tile-text"><b data-i18n="src.system"></b><small data-i18n="src.system.desc"></small></span></button>
+          <button data-value="browser"><span data-icon="puzzle" class="tile-ic"></span><span class="tile-text"><b data-i18n="src.browser"></b><small data-i18n="src.browser.desc"></small></span></button>
+          <button data-value="app"><span data-icon="app-window" class="tile-ic"></span><span class="tile-text"><b data-i18n="src.app"></b><small data-i18n="src.app.desc"></small></span></button>
+        </div>
+      </div>
+
+      <div class="card-list" id="browserSteps">
+        <div class="row step"><span class="num">1</span><span class="text"><b data-i18n="ext.step1"></b><code id="extDir" class="path"></code></span><button class="btn small" id="openExtFolder"><span data-icon="folder-open"></span></button></div>
+        <div class="row step"><span class="num">2</span><span class="text"><b data-i18n="ext.step2"></b><small><code>chrome://extensions</code> · <span data-i18n="ext.step2b"></span></small></span></div>
+        <div class="row step"><span class="num">3</span><span class="text"><b data-i18n="ext.step3"></b></span><button class="btn small" id="openGuide"><span data-icon="external-link"></span></button></div>
+      </div>
+
+      <div class="group">
+        <div class="label"><b data-i18n="gen.language"></b></div>
+        <div class="seg" data-path="general.language">
+          <button data-value="auto"><span data-icon="globe"></span><span data-i18n="gen.auto"></span></button>
+          <button data-value="ru">Русский</button>
+          <button data-value="en">English</button>
+        </div>
+      </div>
+
+      <div class="card-list">
+        <label class="row"><span data-icon="power" class="row-ic"></span><span class="text"><b data-i18n="gen.autostart"></b><small data-i18n="gen.autostart.desc"></small></span><input type="checkbox" class="switch" data-path="general.autostart"></label>
+        <label class="row"><span data-icon="minus" class="row-ic"></span><span class="text"><b data-i18n="gen.tray"></b><small data-i18n="gen.tray.desc"></small></span><input type="checkbox" class="switch" data-path="general.closeToTray"></label>
+        <label class="row"><span data-icon="cpu" class="row-ic"></span><span class="text"><b data-i18n="gen.gpu"></b><small data-i18n="gen.gpu.desc"></small></span><input type="checkbox" class="switch" data-path="general.gpu"></label>
+        <label class="row" id="showWindowRow"><span data-icon="app-window" class="row-ic"></span><span class="text"><b data-i18n="gen.showWindow"></b><small data-i18n="gen.showWindow.desc"></small></span><input type="checkbox" class="switch" data-path="general.showWindow"></label>
+      </div>
+      <p class="hint small" id="restartNote" data-i18n="gen.restart" hidden></p>
+
+      <footer class="about">
+        <img src="../../assets/icon.png" alt="" class="about-logo">
+        <div><b>Moa</b> <span id="version"></span><br><small>Music Overlay App</small></div>
+        <span class="grow"></span>
+        <button class="social" data-url="https://github.com/godes2020/maol" data-tip="app.github"><span data-icon="github"></span></button>
+        <button class="social" data-url="https://github.com/godes2020/maol/issues/new" data-tip="app.bug"><span data-icon="info"></span></button>
+      </footer>
     </section>
   </main>
 
+  <nav class="tabbar" id="tabs">
+    <button data-tab="home" class="active"><span data-icon="house"></span><small data-i18n="nav.home"></small></button>
+    <button data-tab="overlay"><span data-icon="layers"></span><small data-i18n="nav.overlay"></small></button>
+    <button data-tab="hotkeys"><span data-icon="keyboard"></span><small data-i18n="nav.hotkeys"></small></button>
+    <button data-tab="settings"><span data-icon="settings"></span><small data-i18n="nav.settings"></small></button>
+  </nav>
+
   <script src="../shared/i18n.js"></script>
+  <script src="../shared/icons.js"></script>
   <script src="settings.js"></script>
 </body>
 </html>

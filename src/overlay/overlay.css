@@ -26,11 +26,23 @@ html, body {
 
 button { font: inherit; color: inherit; }
 
-.card {
+/* The box fills the window minus the glow padding. The card sits at the
+   edge nearest to the screen edge and unfolds away from it; the edit
+   toolbar goes on the other side. */
+.box {
   position: absolute;
-  top: 18px;
-  left: 18px;
-  width: 300px;
+  inset: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+body.anchor-bottom .box { flex-direction: column-reverse; }
+
+.card {
+  position: relative;
+  flex: none;
+  width: 100%;
   height: 76px;
   border-radius: 12px;
   overflow: hidden;
@@ -131,8 +143,8 @@ button { font: inherit; color: inherit; }
 .cover img {
   position: absolute;
   inset: 4px;
-  width: 48px;
-  height: 48px;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
   border-radius: 5px;
   object-fit: cover;
   opacity: 0;
@@ -150,7 +162,7 @@ button { font: inherit; color: inherit; }
 .cover-empty svg { width: 22px; height: 22px; fill: rgba(255, 255, 255, .85); }
 .cover img.loaded + .cover-empty { display: none; }
 
-.ring { position: absolute; inset: 0; width: 56px; height: 56px; overflow: visible; }
+.ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .ring rect { fill: none; stroke-width: 2.5; }
 .ring-track { stroke: rgba(255, 255, 255, .1); }
 .ring-fill {
@@ -268,7 +280,7 @@ button { font: inherit; color: inherit; }
 .only-expanded { opacity: 0; transition: opacity .2s; pointer-events: none; }
 .card.expanded .only-expanded { opacity: 1; pointer-events: auto; }
 .card.expanded .only-compact { display: none; }
-.card.compact .btn.play { display: none; }
+.card.compact .main-play { display: none; }
 
 .progress { display: flex; align-items: center; gap: 8px; height: 26px; margin-top: 4px; }
 .time { font-size: 11px; color: rgba(255, 255, 255, .7); font-variant-numeric: tabular-nums; min-width: 30px; }
@@ -299,68 +311,170 @@ button { font: inherit; color: inherit; }
 .controls { display: flex; align-items: center; gap: 2px; height: 34px; margin-left: -4px; }
 .controls .spacer { flex: 1; }
 
+/* ---------------- Mirrored card (cover on the right) ---------------- */
+
+body.side-right .top,
+body.side-right .controls { flex-direction: row-reverse; }
+body.side-right .controls { margin: 0 -4px 0 0; }
+body.side-right .meta { text-align: right; }
+body.side-right .title { mask-image: linear-gradient(270deg, #000 88%, transparent); }
+body.side-right .artist .toast { left: auto; right: 0; }
+body.side-right .bg-shade { background: linear-gradient(270deg, rgba(10, 10, 12, .55), rgba(10, 10, 12, .78)); }
+body.side-right .bg-flash { background: radial-gradient(120% 160% at 88% 50%, rgba(var(--c2), .5), transparent 65%); }
+
 /* ---------------- "Cover only" layout ---------------- */
-/* Collapsed, only the cover with its progress ring and beat glow is
-   visible; hovering unfolds the full player. */
+/* Only the cover with its progress ring and beat glow. Hovering (or edit
+   mode) dims the cover and shows small controls on top of it; nothing
+   unfolds. */
 
 .cover-glow {
   position: absolute;
-  inset: -9px;
-  border-radius: 16px;
+  inset: -10px;
+  border-radius: 22px;
   background: radial-gradient(closest-side, rgba(var(--c1), .9), rgba(var(--c2), .45) 60%, transparent);
-  filter: blur(9px);
+  filter: blur(10px);
   opacity: 0;
   transition: opacity .4s;
   pointer-events: none;
 }
+.cover-ui { display: none; }
 
-body.layout-cover .card.compact {
-  width: 76px;
+body.layout-cover .card {
+  width: 96px;
+  height: 96px;
   overflow: visible;
   background: transparent;
   box-shadow: none;
 }
-body.layout-cover .card .bg { transition: opacity .3s; }
-body.layout-cover .card.compact .bg { opacity: 0; }
-body.layout-cover .card.compact .meta,
-body.layout-cover .card.compact .only-compact { display: none; }
-body.layout-cover .card.compact .cover-glow {
-  opacity: calc(.3 + .55 * var(--pulse) * var(--intensity) + .15 * var(--e));
-}
-body.layout-cover .card.compact .cover {
+body.layout-cover .card .bg,
+body.layout-cover .meta,
+body.layout-cover .top > .btn,
+body.layout-cover .progress,
+body.layout-cover .controls { display: none; }
+body.layout-cover .content { padding: 0; }
+body.layout-cover .top { height: 96px; }
+body.layout-cover .cover {
+  flex: 0 0 96px;
+  width: 96px;
+  height: 96px;
+  border-radius: 14px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, .45);
 }
-body.layout-cover .card.paused.compact .cover-glow,
-body.layout-cover .card.idle.compact .cover-glow { opacity: .22; }
+body.layout-cover .cover img,
+body.layout-cover .cover-empty { inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); border-radius: 9px; }
+body.layout-cover .cover-empty svg { width: 34px; height: 34px; }
+body.layout-cover .cover-glow { opacity: calc(.3 + .55 * var(--pulse) * var(--intensity) + .15 * var(--e)); }
+body.layout-cover .card.paused .cover-glow,
+body.layout-cover .card.idle .cover-glow { opacity: .22; }
+
+body.layout-cover .cover-ui {
+  position: absolute;
+  inset: 6px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2px 3px 3px;
+  border-radius: 9px;
+  background: rgba(8, 8, 12, .66);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+body.layout-cover .card.hot .cover-ui,
+body.layout-cover.edit .cover-ui { opacity: 1; pointer-events: auto; }
+.cu-row { display: flex; align-items: center; justify-content: space-between; }
+.cu-row.mid { justify-content: center; gap: 1px; }
+.btn.sm { width: 22px; height: 22px; border-radius: 6px; }
+.btn.sm svg { width: 15px; height: 15px; }
+.btn.sm .bars { height: 12px; gap: 1.5px; }
+.btn.sm .bars i { width: 2px; height: calc(2px + 10px * var(--h, 0)); }
+.btn.sm.eq.muted::after { width: 15px; }
+.btn.sm.repeat .one { right: 1px; bottom: 0; font-size: 8px; }
+.cover-ui .btn.play { width: 30px; height: 30px; }
+.cover-ui .btn.play svg { width: 20px; height: 20px; }
+.cu-bar { height: 10px; flex: none; }
+.cu-bar .bar-track, .cu-bar .bar-fill { top: 4px; }
 
 /* ---------------- Edit mode ---------------- */
 
-.edit-hint {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 22px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  font-size: 11px;
-  background: rgba(var(--c1), .85);
-}
-.edit-hint kbd {
-  font: inherit;
-  font-weight: 700;
-  padding: 0 4px;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, .3);
-}
 body.edit .card {
   -webkit-app-region: drag;
   cursor: move;
   outline: 2px dashed rgba(255, 255, 255, .8);
   outline-offset: -2px;
-  height: 158px;
 }
+body.layout-cover.edit .card { outline-offset: 2px; border-radius: 14px; }
 body.edit .card .btn,
-body.edit .card .bar { -webkit-app-region: no-drag; }
-body.edit .edit-hint { display: flex; }
+body.edit .card .bar,
+body.edit .grip,
+body.edit .toolbar .tb { -webkit-app-region: no-drag; }
 
+.toolbar {
+  display: none;
+  flex: none;
+  height: 26px;
+  align-items: center;
+  gap: 2px;
+  padding: 0 3px;
+  border-radius: 9px;
+  background: rgba(18, 17, 24, .94);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .4), inset 0 0 0 1px rgba(255, 255, 255, .08);
+  -webkit-app-region: drag;
+  font-size: 11px;
+}
+body.edit .toolbar { display: flex; }
+.tb {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border: 0;
+  padding: 0;
+  border-radius: 6px;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: rgba(255, 255, 255, .85);
+}
+.tb:hover { background: rgba(255, 255, 255, .12); color: #fff; }
+.tb svg { width: 15px; height: 15px; fill: currentColor; }
+.tb.done { background: rgba(var(--c1), .9); color: #fff; }
+.tb-hint { flex: 1; min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; color: rgba(255, 255, 255, .7); }
+.tb-hint kbd { font: inherit; font-weight: 700; color: #fff; }
+body.layout-cover .tb-hint { display: none; }
+body.layout-cover #flipBtn { display: none; }
+body.layout-cover .toolbar { justify-content: space-between; }
+
+/* Resize grip in the corner that points away from the screen edges. */
+.grip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  width: 18px;
+  height: 18px;
+  display: none;
+  cursor: nwse-resize;
+}
+.grip i {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 9px;
+  height: 9px;
+  border-right: 2.5px solid #fff;
+  border-bottom: 2.5px solid #fff;
+  border-radius: 0 0 3px 0;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, .8));
+}
+body.edit .grip { display: block; }
+body.anchor-right .grip { right: auto; left: 0; cursor: nesw-resize; }
+body.anchor-right .grip i { right: auto; left: 3px; border-right: 0; border-left: 2.5px solid #fff; border-radius: 0 0 0 3px; }
+body.anchor-bottom .grip { bottom: auto; top: 0; cursor: nesw-resize; }
+body.anchor-bottom .grip i { bottom: auto; top: 3px; border-bottom: 0; border-top: 2.5px solid #fff; border-radius: 0 3px 0 0; }
+body.anchor-bottom.anchor-right .grip { cursor: nwse-resize; }
+body.anchor-bottom.anchor-right .grip i { border-radius: 3px 0 0 0; }
+body.layout-cover .grip { right: -14px; bottom: -14px; }
+body.layout-cover.anchor-right .grip { right: auto; left: -14px; }
+body.layout-cover.anchor-bottom .grip { bottom: auto; top: -14px; }

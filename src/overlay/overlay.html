@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="overlay.css">
 </head>
 <body>
+  <div class="box" id="box">
   <div id="card" class="card compact idle">
     <div class="bg" aria-hidden="true">
       <div class="bg-art" id="bgArt"></div>
@@ -28,6 +29,25 @@
             <rect class="ring-track" x="1.5" y="1.5" width="53" height="53" rx="7" ry="7" pathLength="100"/>
             <rect class="ring-fill" id="ring" x="1.5" y="1.5" width="53" height="53" rx="7" ry="7" pathLength="100"/>
           </svg>
+          <!-- "Cover only": controls dim the cover instead of unfolding a card. -->
+          <div class="cover-ui">
+            <div class="cu-row">
+              <button class="btn sm eq" data-cmd="toggleMute" data-tip="overlay.mute"><span class="bars"><i></i><i></i><i></i><i></i><i></i></span></button>
+              <button class="btn sm repeat" data-cmd="cycleRepeat" data-tip="overlay.repeat">
+                <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2zM17 17H7v-3l-4 4 4 4v-3h12v-6h-2z"/></svg>
+                <b class="one">1</b>
+              </button>
+            </div>
+            <div class="cu-row mid">
+              <button class="btn sm" data-cmd="previous" data-tip="overlay.prev"><svg viewBox="0 0 24 24"><path d="M6 5h2.5v14H6zM19 5.5v13L9.5 12z"/></svg></button>
+              <button class="btn play" data-cmd="playPause" data-tip="overlay.playPause">
+                <svg class="i-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
+                <svg class="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>
+              </button>
+              <button class="btn sm" data-cmd="next" data-tip="overlay.next"><svg viewBox="0 0 24 24"><path d="M15.5 5H18v14h-2.5zM5 5.5v13L14.5 12z"/></svg></button>
+            </div>
+            <div class="cu-bar bar" data-seek><div class="bar-track"></div><div class="bar-fill"></div></div>
+          </div>
         </div>
 
         <div class="meta">
@@ -38,7 +58,7 @@
         <button class="btn eq only-compact" id="eqCompact" data-cmd="toggleMute" data-tip="overlay.mute">
           <span class="bars"><i></i><i></i><i></i><i></i><i></i></span>
         </button>
-        <button class="btn play only-expanded" id="playBtn" data-cmd="playPause" data-tip="overlay.playPause">
+        <button class="btn play only-expanded main-play" id="playBtn" data-cmd="playPause" data-tip="overlay.playPause">
           <svg class="i-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
           <svg class="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>
         </button>
@@ -46,7 +66,7 @@
 
       <div class="progress only-expanded">
         <span class="time" id="cur">0:00</span>
-        <div class="bar" id="bar">
+        <div class="bar" id="bar" data-seek>
           <div class="bar-track"></div>
           <div class="bar-fill" id="barFill"></div>
           <div class="bar-knob" id="barKnob"></div>
@@ -79,9 +99,21 @@
       </div>
     </div>
 
-    <div class="edit-hint">
-      <span id="editHint"></span> · <kbd id="editKey">Alt+Shift+M</kbd> <span id="editDone"></span>
-    </div>
+    <div class="grip" id="grip" data-tip="overlay.resize"><i></i></div>
+  </div>
+
+  <div class="toolbar" id="toolbar">
+    <button class="tb" data-cmd="flipSide" data-tip="overlay.flip" id="flipBtn">
+      <svg viewBox="0 0 24 24"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="tb" data-cmd="toggleLayout" data-tip="overlay.layout">
+      <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><rect x="6" y="9" width="6" height="6" rx="1.5"/></svg>
+    </button>
+    <span class="tb-hint"><kbd id="editKey">Alt+Shift+M</kbd> <span id="editDone"></span></span>
+    <button class="tb done" data-cmd="editOverlay" data-tip="overlay.done">
+      <svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
   </div>
 
   <script src="../shared/i18n.js"></script>

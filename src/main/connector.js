@@ -20,6 +20,8 @@ class Connector extends EventEmitter {
   }
 
   start() {
+    if (this.wss) return;
+    this.error = null;
     this.wss = new WebSocketServer({
       host: '127.0.0.1',
       port: PORT,
@@ -84,7 +86,10 @@ class Connector extends EventEmitter {
   }
 
   stop() {
-    if (this.wss) this.wss.close();
+    if (!this.wss) return;
+    if (this.client) this.client.close();
+    this.wss.close();
+    this.wss = null;
   }
 }
 

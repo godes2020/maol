@@ -17,7 +17,7 @@ const DEFAULT_HOTKEYS = {
   editOverlay: 'Alt+Shift+M',
   toggleLock: 'Alt+Shift+U',
   showApp: 'Alt+Shift+Y',
-  openSettings: ''
+  openPlayer: ''
 };
 
 const DEFAULTS = {
@@ -25,6 +25,9 @@ const DEFAULTS = {
   overlay: {
     visible: true,
     layout: 'card',
+    // Which side the cover sits on in the card: 'auto' follows the screen
+    // half the overlay is on, so the cover is always at the screen edge.
+    side: 'auto',
     // 'locked': fully click-through, controls only in edit mode (for games).
     // 'hover': hovering unfolds the player and its buttons are clickable.
     interaction: 'locked',
@@ -42,12 +45,16 @@ const DEFAULTS = {
     volumeStep: 5
   },
   general: {
-    source: 'browser',
+    // 'system': Windows media controls, works with any player (default).
+    // 'browser': the Moa Connector extension. 'app': the built-in window.
+    source: 'system',
+    migrated: 0,
     onboarded: false,
     language: 'auto',
     autostart: false,
     closeToTray: true,
-    showWindow: false
+    showWindow: false,
+    gpu: true
   },
   window: {
     width: 480,
@@ -77,6 +84,17 @@ class Config {
   constructor() {
     this.file = path.join(app.getPath('userData'), 'config.json');
     this.data = merge(DEFAULTS, this.read());
+    this.migrate();
+  }
+
+  migrate() {
+    const g = this.data.general;
+    if (g.migrated < 3) {
+      // 0.3 reads any player through Windows; the extension became optional.
+      if (g.source === 'browser') g.source = 'system';
+      g.migrated = 3;
+      this.save();
+    }
   }
 
   read() {

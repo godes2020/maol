@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Moa Connector",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Connects YouTube Music in your browser to the Moa desktop overlay and hotkeys.",
   "icons": {
     "16": "icons/16.png",

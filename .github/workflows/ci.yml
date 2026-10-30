@@ -17,3 +17,17 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+
+  helper:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build media helper
+        run: dotnet publish helper/MoaMedia -c Release -o build/helper
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          Get-ChildItem build/helper
+          $p = Start-Process build/helper/MoaMedia.exe -ArgumentList '--once' -Wait -PassThru -RedirectStandardOutput helper-out.txt
+          Get-Content helper-out.txt
+          if (-not (Select-String -Path helper-out.txt -Pattern '"type":"hello"')) { throw 'MoaMedia did not start' }

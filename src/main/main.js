@@ -3,6 +3,7 @@ const fs = require('fs');
 const {
   app,
   BrowserWindow,
+  desktopCapturer,
   Menu,
   Tray,
   globalShortcut,
@@ -10,10 +11,12 @@ const {
   nativeImage,
   net,
   screen,
+  session,
   shell
 } = require('electron');
 const { Config, DEFAULT_HOTKEYS } = require('./config');
 const { Connector } = require('./connector');
+const { SystemMedia } = require('./media');
 const i18n = require('../shared/i18n');
 
 const YTM_URL = 'https://music.youtube.com/';
@@ -56,10 +59,12 @@ const CONSENT_DIALOG_CSS = `
   ytd-consent-bump-v2-lightbox a, ytmusic-consent-bump a { color: #8ab4f8 !important; }
 `;
 
-// Overlay card size in CSS pixels (before scaling) plus room for the glow.
-const OVERLAY_W = 300;
-const OVERLAY_H = 140;
+// Overlay content box in CSS pixels before scaling: the expanded card plus
+// the edit toolbar. The window adds room for the glow on every side.
+const OVERLAY_BOX = { card: { w: 300, h: 168 }, cover: { w: 96, h: 128 } };
 const OVERLAY_PAD = 18;
+const SCALE_MIN = 0.6;
+const SCALE_MAX = 2.5;
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -67,12 +72,15 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 app.setAppUserModelId('io.github.godes2020.moa');
+// Moa never plays media itself in its own windows; keep Chromium from
+// registering media keys or a media session of its own.
+app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling,MediaSessionService');
 
 let config;
 let t = (k) => k;
 let mainWin = null;
 let overlayWin = null;
-let settingsWin = null;
+let appWin = null;
 let tray = null;
 let quitting = false;
 let editMode = false;
@@ -82,12 +90,16 @@ let lastState = null;
 let lastArtUrl = null;
 const artCache = new Map();
 const connector = new Connector();
+let media = null;
+let resizing = null;
+let anchors = { right: false, bottom: false };
 
 // ---------------------------------------------------------------------------
 // Windows
 
-function isBrowserMode() {
-  return config.get().general.source !== 'app';
+function source() {
+  const s = config.get().general.source;
+  return s === 'browser' || s === 'app' ? s : 'system';
 }
 
 function createMainWindow(showOnReady = false) {
@@ -146,14 +158,11 @@ function createMainWindow(showOnReady = false) {
   mainWin.on('resized', saveBounds);
   mainWin.on('moved', saveBounds);
 
+  // The player keeps playing in the background; Moa quits from the tray.
   mainWin.on('close', (e) => {
     if (quitting) return;
-    if (config.get().general.closeToTray) {
-      e.preventDefault();
-      mainWin.hide();
-    } else {
-      quit();
-    }
+    e.preventDefault();
+    mainWin.hide();
   });
   mainWin.on('closed', () => {
     mainWin = null;
@@ -162,24 +171,86 @@ function createMainWindow(showOnReady = false) {
   mainWin.loadURL(YTM_URL);
 }
 
+function overlayScale() {
+  return clamp(Number(config.get().overlay.scale) || 1, SCALE_MIN, SCALE_MAX);
+}
+
+function overlaySize(scale = overlayScale()) {
+  const box = OVERLAY_BOX[config.get().overlay.layout === 'cover' ? 'cover' : 'card'];
+  return {
+    width: Math.round((box.w + OVERLAY_PAD * 2) * scale),
+    height: Math.round((box.h + OVERLAY_PAD * 2) * scale)
+  };
+}
+
+// Keeps the visible box inside the work area of the display it is on; the
+// transparent glow padding may hang over the edge.
+function fitToScreen(b, scale) {
+  const pad = Math.round(OVERLAY_PAD * scale);
+  const area = screen.getDisplayMatching(b).workArea;
+  return {
+    ...b,
+    x: clamp(b.x, area.x - pad, area.x + area.width - b.width + pad),
+    y: clamp(b.y, area.y - pad, area.y + area.height - b.height + pad)
+  };
+}
+
 function overlayBounds() {
   const o = config.get().overlay;
-  const scale = clamp(Number(o.scale) || 1, 0.6, 2);
-  const width = Math.round((OVERLAY_W + OVERLAY_PAD * 2) * scale);
-  const height = Math.round((OVERLAY_H + OVERLAY_PAD * 2) * scale);
+  const scale = overlayScale();
+  const { width, height } = overlaySize(scale);
   const area = screen.getPrimaryDisplay().workArea;
   let x = o.x ?? area.x + 12;
   let y = o.y ?? area.y + 12;
   // Bring the overlay back if its saved position is off every display.
   const visible = screen.getAllDisplays().some((d) => {
-    const b = d.bounds;
-    return x + width > b.x + 20 && x < b.x + b.width - 20 && y + height > b.y + 20 && y < b.y + b.height - 20;
+    const r = d.bounds;
+    return x + width > r.x + 20 && x < r.x + r.width - 20 && y + height > r.y + 20 && y < r.y + r.height - 20;
   });
   if (!visible) {
     x = area.x + 12;
     y = area.y + 12;
   }
-  return { x, y, width, height, scale };
+  return { ...fitToScreen({ x, y, width, height }, scale), scale };
+}
+
+// Which screen half the overlay is in decides where it grows: on the right
+// it grows to the left, at the bottom it unfolds upwards.
+function computeAnchors(b) {
+  const area = screen.getDisplayMatching(b).workArea;
+  return {
+    right: b.x + b.width / 2 > area.x + area.width / 2,
+    bottom: b.y + b.height / 2 > area.y + area.height / 2
+  };
+}
+
+// Resizes the overlay window while keeping the corner nearest to the screen
+// edge in place.
+function resizeOverlay(scale, from) {
+  if (!overlayWin) return;
+  const prev = from || overlayWin.getBounds();
+  const { width, height } = overlaySize(scale);
+  const a = computeAnchors(prev);
+  const next = fitToScreen({
+    x: a.right ? prev.x + prev.width - width : prev.x,
+    y: a.bottom ? prev.y + prev.height - height : prev.y,
+    width,
+    height
+  }, scale);
+  overlayWin.setBounds(next);
+  overlayWin.webContents.setZoomFactor(scale);
+  return next;
+}
+
+function sendOverlayLayout() {
+  if (!overlayWin) return;
+  anchors = computeAnchors(overlayWin.getBounds());
+  const side = config.get().overlay.side;
+  sendOverlay('overlay:layout', {
+    coverRight: side === 'auto' ? anchors.right : side === 'right',
+    right: anchors.right,
+    bottom: anchors.bottom
+  });
 }
 
 function createOverlayWindow() {
@@ -215,9 +286,10 @@ function createOverlayWindow() {
   overlayWin.webContents.setZoomFactor(b.scale);
 
   overlayWin.on('moved', () => {
-    if (!overlayWin) return;
+    if (!overlayWin || resizing) return;
     const [x, y] = overlayWin.getPosition();
     config.patch({ overlay: { x, y } });
+    sendOverlayLayout();
   });
   overlayWin.on('closed', () => {
     overlayWin = null;
@@ -228,14 +300,56 @@ function createOverlayWindow() {
   });
 }
 
+function overlayConfig() {
+  const c = config.get();
+  // With the system source the overlay listens to the sound output itself.
+  return { ...c.overlay, loopback: source() === 'system' && c.overlay.reactive };
+}
+
 function applyOverlayConfig() {
   if (!overlayWin) return;
-  const b = overlayBounds();
+  const scale = overlayScale();
+  const { width, height } = overlaySize(scale);
   const [w, h] = overlayWin.getSize();
-  if (w !== b.width || h !== b.height) overlayWin.setBounds({ x: b.x, y: b.y, width: b.width, height: b.height });
-  overlayWin.webContents.setZoomFactor(b.scale);
-  sendOverlay('overlay:config', config.get().overlay);
+  if (w !== width || h !== height) {
+    const b = resizeOverlay(scale);
+    config.patch({ overlay: { x: b.x, y: b.y } });
+  }
+  overlayWin.webContents.setZoomFactor(scale);
+  sendOverlay('overlay:config', overlayConfig());
+  sendOverlayLayout();
   updateOverlayVisibility();
+}
+
+// Dragging the resize grip in edit mode: follow the cursor from the main
+// process, where screen coordinates do not change with the zoom factor.
+function startResize() {
+  if (!overlayWin || resizing) return;
+  const b = overlayWin.getBounds();
+  const a = computeAnchors(b);
+  const box = OVERLAY_BOX[config.get().overlay.layout === 'cover' ? 'cover' : 'card'];
+  const start = screen.getCursorScreenPoint();
+  const scale0 = overlayScale();
+  resizing = setInterval(() => {
+    const p = screen.getCursorScreenPoint();
+    const dx = (p.x - start.x) * (a.right ? -1 : 1);
+    const dy = (p.y - start.y) * (a.bottom ? -1 : 1);
+    const delta = box.w === box.h - 32 ? (dx + dy) / 2 : dx;
+    const scale = Math.round(clamp(scale0 * (1 + delta / (box.w * scale0)), SCALE_MIN, SCALE_MAX) * 100) / 100;
+    if (scale === overlayScale()) return;
+    config.get().overlay.scale = scale;
+    resizeOverlay(scale, b);
+  }, 16);
+}
+
+function endResize() {
+  if (!resizing) return;
+  clearInterval(resizing);
+  resizing = null;
+  const [x, y] = overlayWin.getPosition();
+  config.patch({ overlay: { x, y, scale: overlayScale() } });
+  sendOverlayLayout();
+  pushSettingsInfo();
 }
 
 function updateOverlayVisibility() {
@@ -262,60 +376,62 @@ function setEditMode(on) {
   rebuildTrayMenu();
 }
 
-function createSettingsWindow(tab) {
-  if (settingsWin) {
-    settingsWin.show();
-    settingsWin.focus();
+// The Moa window: now playing, quick toggles and every setting. It is
+// destroyed when closed so it costs no memory while Moa sits in the tray.
+function createAppWindow(tab) {
+  if (appWin) {
+    if (appWin.isMinimized()) appWin.restore();
+    appWin.show();
+    appWin.focus();
+    if (typeof tab === 'string' && tab) appWin.webContents.send('app:tab', tab);
     return;
   }
-  settingsWin = new BrowserWindow({
-    width: 560,
-    height: 720,
-    minWidth: 460,
-    minHeight: 480,
-    title: t('settings.title'),
+  appWin = new BrowserWindow({
+    width: 440,
+    height: 700,
+    minWidth: 400,
+    minHeight: 560,
+    title: 'Moa',
     icon: ICON,
-    backgroundColor: '#0d0b14',
-    autoHideMenuBar: true,
+    frame: false,
+    backgroundColor: '#0c0b10',
+    show: false,
     webPreferences: {
       preload: path.join(ROOT, 'src', 'preload', 'settings.js'),
       contextIsolation: true,
-      sandbox: true
+      sandbox: true,
+      spellcheck: false
     }
   });
-  settingsWin.setMenu(null);
-  settingsWin.webContents.setWindowOpenHandler(({ url }) => {
+  appWin.setMenu(null);
+  appWin.once('ready-to-show', () => appWin && appWin.show());
+  appWin.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https://')) shell.openExternal(url);
     return { action: 'deny' };
   });
-  settingsWin.on('closed', () => {
-    settingsWin = null;
+  appWin.on('closed', () => {
+    appWin = null;
     hotkeysSuspended = false;
     registerHotkeys();
+    if (!config.get().general.closeToTray && !quitting) quit();
   });
-  settingsWin.loadFile(path.join(ROOT, 'src', 'settings', 'settings.html'), {
+  appWin.loadFile(path.join(ROOT, 'src', 'settings', 'settings.html'), {
     query: { lang: currentLang(), tab: typeof tab === 'string' ? tab : '' }
   });
 }
 
-function toggleMainWindow() {
-  if (isBrowserMode()) return showMainWindow();
-  if (!mainWin) return;
-  if (mainWin.isVisible() && !mainWin.isMinimized() && mainWin.isFocused()) {
-    mainWin.hide();
-  } else {
-    showMainWindow();
-  }
+function toggleAppWindow() {
+  if (appWin && appWin.isVisible() && appWin.isFocused()) appWin.close();
+  else createAppWindow();
 }
 
-// In browser mode "the Moa window" is the YouTube Music tab in the browser.
-function showMainWindow() {
-  if (isBrowserMode()) {
-    if (connector.connected) connector.cmd('focusPlayer');
-    else shell.openExternal(YTM_URL);
-    return;
-  }
+// "The player": the built-in YouTube Music window, or the browser tab.
+function showPlayer() {
+  const src = source();
+  if (src === 'browser' && connector.connected) return connector.cmd('focusPlayer');
+  if (src !== 'app') return shell.openExternal(YTM_URL);
   if (!mainWin) return createMainWindow(true);
+  if (mainWin.isVisible() && !mainWin.isMinimized() && mainWin.isFocused()) return mainWin.hide();
   if (mainWin.isMinimized()) mainWin.restore();
   mainWin.show();
   mainWin.focus();
@@ -329,7 +445,8 @@ function rebuildTrayMenu() {
   const o = config.get().overlay;
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: isBrowserMode() ? t('tray.openPlayer') : t('tray.show'), click: showMainWindow },
+      { label: t('tray.open'), click: () => createAppWindow() },
+      ...(source() === 'app' ? [{ label: t('tray.show'), click: showPlayer }] : []),
       { type: 'separator' },
       {
         label: t('tray.overlay'),
@@ -338,7 +455,6 @@ function rebuildTrayMenu() {
         click: () => runAction('toggleOverlay')
       },
       { label: t('tray.editOverlay'), type: 'checkbox', checked: editMode, click: () => runAction('editOverlay') },
-      { label: t('tray.settings'), click: createSettingsWindow },
       { type: 'separator' },
       { label: t('tray.quit'), click: quit }
     ])
@@ -349,8 +465,7 @@ function createTray() {
   const img = nativeImage.createFromPath(TRAY_ICON);
   tray = new Tray(img.isEmpty() ? nativeImage.createFromPath(ICON).resize({ width: 16, height: 16 }) : img);
   tray.setToolTip('Moa — Music Overlay App');
-  tray.on('click', showMainWindow);
-  tray.on('double-click', showMainWindow);
+  tray.on('click', () => createAppWindow());
   rebuildTrayMenu();
 }
 
@@ -359,7 +474,7 @@ function createAppMenu() {
     {
       label: t('menu.app'),
       submenu: [
-        { label: t('tray.settings'), accelerator: 'CmdOrCtrl+,', click: createSettingsWindow },
+        { label: t('tray.open'), accelerator: 'CmdOrCtrl+,', click: () => createAppWindow() },
         { label: t('tray.editOverlay'), click: () => runAction('editOverlay') },
         { type: 'separator' },
         { label: t('menu.back'), accelerator: 'Alt+Left', click: () => mainWin && mainWin.webContents.navigationHistory.goBack() },
@@ -378,7 +493,8 @@ function createAppMenu() {
 // Player commands & hotkeys
 
 function ytm(name, arg) {
-  if (isBrowserMode()) return connector.cmd(name, arg);
+  if (source() === 'system') return media ? media.cmd(name, arg) : Promise.resolve(null);
+  if (source() === 'browser') return connector.cmd(name, arg);
   if (!mainWin) return Promise.resolve(null);
   const code = `window.__moa ? window.__moa.cmd(${JSON.stringify(name)}, ${JSON.stringify(arg ?? null)}) : null`;
   return mainWin.webContents.executeJavaScript(code).catch(() => null);
@@ -406,14 +522,15 @@ const actions = {
     if (v != null) toast(`${t('overlay.volume')} ${v}%`);
   },
   toggleMute: async () => {
-    await ytm('toggleMute');
-    const muted = lastState ? !lastState.muted : true;
-    toast(muted ? t('overlay.muted') : `${t('overlay.volume')} ${lastState ? lastState.volume : ''}%`);
+    const res = await ytm('toggleMute');
+    const muted = typeof res === 'boolean' ? res : lastState ? !lastState.muted : true;
+    toast(muted ? t('overlay.muted') : `${t('overlay.volume')} ${lastState && lastState.volume != null ? lastState.volume : ''}%`);
   },
   cycleRepeat: async () => {
-    await ytm('cycleRepeat');
-    const next = REPEAT_NEXT[(lastState && lastState.repeat) || 'NONE'] || 'NONE';
-    toast(t(REPEAT_LABEL[next]));
+    const res = await ytm('cycleRepeat');
+    if (res === 'unsupported') return toast(t('overlay.repeatUnsupported'));
+    const next = typeof res === 'string' ? res : REPEAT_NEXT[(lastState && lastState.repeat) || 'NONE'] || 'NONE';
+    toast(t(REPEAT_LABEL[next] || 'overlay.repeatOff'));
   },
   toggleOverlay: () => {
     const visible = !config.get().overlay.visible;
@@ -421,6 +538,7 @@ const actions = {
     if (!visible && editMode) setEditMode(false);
     applyOverlayConfig();
     rebuildTrayMenu();
+    pushSettingsInfo();
   },
   editOverlay: () => setEditMode(!editMode),
   toggleLock: () => {
@@ -430,15 +548,27 @@ const actions = {
     pushSettingsInfo();
     toast(t(interaction === 'locked' ? 'overlay.locked' : 'overlay.unlocked'));
   },
-  showApp: toggleMainWindow,
-  openSettings: createSettingsWindow
+  showApp: toggleAppWindow,
+  openPlayer: showPlayer,
+  flipSide: () => {
+    const side = (config.get().overlay.side === 'auto' ? anchors.right : config.get().overlay.side === 'right') ? 'left' : 'right';
+    config.patch({ overlay: { side } });
+    applyOverlayConfig();
+    pushSettingsInfo();
+  },
+  toggleLayout: () => {
+    config.patch({ overlay: { layout: config.get().overlay.layout === 'cover' ? 'card' : 'cover' } });
+    applyOverlayConfig();
+    pushSettingsInfo();
+  }
 };
 
 function runAction(name, arg) {
   const fn = actions[name];
   if (fn) return fn(arg);
-  // Direct player commands from the overlay (e.g. seekTo from the progress bar).
+  // Direct player commands from the overlay and the Moa window.
   if (['seekTo', 'setVolume'].includes(name)) return ytm(name, arg);
+  if (name === 'volumeTo') return ytm('setVolume', arg);
   return null;
 }
 
@@ -466,6 +596,8 @@ function sendOverlay(channel, data) {
 
 async function fetchArt(url) {
   if (!url) return null;
+  if (url.startsWith('art') && media) return media.getArt(url);
+  if (url.startsWith('data:')) return url;
   if (artCache.has(url)) return artCache.get(url);
   try {
     const res = await net.fetch(url);
@@ -474,7 +606,7 @@ async function fetchArt(url) {
     const type = res.headers.get('content-type') || 'image/jpeg';
     const dataUrl = `data:${type};base64,${buf.toString('base64')}`;
     artCache.set(url, dataUrl);
-    if (artCache.size > 30) artCache.delete(artCache.keys().next().value);
+    if (artCache.size > 8) artCache.delete(artCache.keys().next().value);
     return dataUrl;
   } catch {
     return null;
@@ -485,8 +617,16 @@ function extensionDir() {
   return app.isPackaged ? path.join(process.resourcesPath, 'extension') : path.join(ROOT, 'extension');
 }
 
+function helperExe() {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, 'helper', 'MoaMedia.exe')
+    : path.join(ROOT, 'build', 'helper', 'MoaMedia.exe');
+}
+
 function settingsInfo() {
   return {
+    source: source(),
+    media: media ? { ready: media.ready, error: media.error, available: media.available } : null,
     connector: { connected: connector.connected, version: connector.version, error: connector.error },
     extensionDir: extensionDir(),
     config: config.get(),
@@ -499,19 +639,23 @@ function settingsInfo() {
 
 function setupIpc() {
   ipcMain.on('moa:state', (e, state) => {
-    if (!isBrowserMode() && mainWin && e.sender === mainWin.webContents) handleState(state);
+    if (source() === 'app' && mainWin && e.sender === mainWin.webContents) handleState(state);
   });
   ipcMain.on('moa:audio', (e, audio) => {
-    if (!isBrowserMode() && mainWin && e.sender === mainWin.webContents) sendOverlay('overlay:audio', audio);
+    if (source() === 'app' && mainWin && e.sender === mainWin.webContents) sendOverlay('overlay:audio', audio);
   });
 
   connector.on('state', (state) => {
-    if (isBrowserMode()) handleState(state);
+    if (source() === 'browser') handleState(state);
   });
   connector.on('audio', (audio) => {
-    if (isBrowserMode()) sendOverlay('overlay:audio', audio);
+    if (source() === 'browser') sendOverlay('overlay:audio', audio);
   });
   connector.on('status', pushSettingsInfo);
+  media.on('state', (state) => {
+    if (source() === 'system') handleState(state);
+  });
+  media.on('status', pushSettingsInfo);
 
   ipcMain.on('settings:open-ytm', () => shell.openExternal(YTM_URL));
   ipcMain.on('settings:open-extension-folder', () => shell.openPath(extensionDir()));
@@ -521,11 +665,27 @@ function setupIpc() {
   ipcMain.on('moa:action', (_e, name) => runAction(name));
 
   ipcMain.on('overlay:ready', () => {
-    sendOverlay('overlay:config', config.get().overlay);
+    sendOverlay('overlay:config', overlayConfig());
+    sendOverlayLayout();
     sendOverlay('overlay:edit-mode', editMode);
     if (lastState) sendOverlay('overlay:state', lastState);
     if (lastArtUrl) fetchArt(lastArtUrl).then((art) => sendOverlay('overlay:art', art));
     updateOverlayVisibility();
+  });
+
+  ipcMain.on('overlay:resize', (_e, on) => (on ? startResize() : endResize()));
+
+  ipcMain.on('app:window', (_e, what) => {
+    if (!appWin) return;
+    if (what === 'minimize') appWin.minimize();
+    else if (what === 'close') appWin.close();
+  });
+  ipcMain.handle('app:state', async () => ({
+    state: lastState,
+    art: lastArtUrl ? await fetchArt(lastArtUrl) : null
+  }));
+  ipcMain.on('settings:open-url', (_e, url) => {
+    if (typeof url === 'string' && url.startsWith('https://')) shell.openExternal(url);
   });
 
   ipcMain.on('overlay:interactive', (_e, on) => {
@@ -565,11 +725,13 @@ function setupIpc() {
   });
 
   ipcMain.on('settings:reset-overlay-position', () => {
-    config.patch({ overlay: { x: null, y: null } });
+    config.patch({ overlay: { x: null, y: null, scale: 1, side: 'auto' } });
     if (overlayWin) {
       const b = overlayBounds();
-      overlayWin.setPosition(b.x, b.y);
+      overlayWin.setBounds({ x: b.x, y: b.y, width: b.width, height: b.height });
+      applyOverlayConfig();
     }
+    pushSettingsInfo();
   });
 }
 
@@ -577,26 +739,38 @@ async function handleState(state) {
   const hadTrack = lastState && lastState.hasTrack;
   lastState = state;
   sendOverlay('overlay:state', state);
+  sendApp('app:state', state);
   if (Boolean(hadTrack) !== Boolean(state.hasTrack)) updateOverlayVisibility();
   if (state.artwork !== lastArtUrl) {
     lastArtUrl = state.artwork;
     const art = await fetchArt(state.artwork);
-    if (lastArtUrl === state.artwork) sendOverlay('overlay:art', art);
+    if (lastArtUrl === state.artwork) {
+      sendOverlay('overlay:art', art);
+      sendApp('app:art', art);
+    }
   }
+}
+
+function sendApp(channel, data) {
+  if (appWin && !appWin.isDestroyed()) appWin.webContents.send(channel, data);
 }
 
 function pushSettingsInfo() {
-  if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('settings:info', settingsInfo());
+  sendApp('settings:info', settingsInfo());
 }
 
-// Switches between the browser extension and the built-in window at runtime.
+// Switches the music source at runtime. Only the active one runs: the
+// built-in window alone takes hundreds of megabytes.
 function applySource() {
   handleState({ hasTrack: false, playing: false });
-  if (isBrowserMode()) {
-    if (mainWin) mainWin.destroy();
-  } else if (!mainWin) {
-    createMainWindow(true);
-  }
+  const src = source();
+  if (src === 'system') media.start();
+  else media.stop();
+  if (src === 'browser') connector.start();
+  else connector.stop();
+  if (src !== 'app' && mainWin) mainWin.destroy();
+  if (src === 'app' && !mainWin) createMainWindow(true);
+  sendOverlay('overlay:config', overlayConfig());
   rebuildTrayMenu();
   pushSettingsInfo();
 }
@@ -630,7 +804,7 @@ function quit() {
   app.quit();
 }
 
-app.on('second-instance', showMainWindow);
+app.on('second-instance', () => createAppWindow());
 
 app.on('before-quit', () => {
   quitting = true;
@@ -640,20 +814,38 @@ app.on('before-quit', () => {
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
   connector.stop();
+  if (media) media.stop();
 });
 
 app.on('window-all-closed', () => {
   // Keep running in the tray; quitting is explicit.
 });
 
+// The config is read before the app is ready because turning off hardware
+// acceleration (saves the GPU process, ~60-100 MB) must happen first.
+config = new Config();
+if (!config.get().general.gpu) app.disableHardwareAcceleration();
+
 app.whenReady().then(() => {
-  config = new Config();
   t = i18n.make(currentLang());
+  media = new SystemMedia(helperExe());
+
+  // Beat glow for the system source: the overlay listens to the sound
+  // output (loopback). Only the overlay may ask, and the video part of the
+  // capture is dropped right away.
+  session.defaultSession.setDisplayMediaRequestHandler((req, callback) => {
+    if (!overlayWin || req.frame !== overlayWin.webContents.mainFrame) return callback({});
+    desktopCapturer
+      .getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } })
+      .then((sources) => callback(sources[0] ? { video: sources[0], audio: 'loopback' } : {}))
+      .catch(() => callback({}));
+  });
 
   createAppMenu();
   setupIpc();
-  connector.start();
-  if (!isBrowserMode()) createMainWindow();
+  if (source() === 'system') media.start();
+  if (source() === 'browser') connector.start();
+  if (source() === 'app') createMainWindow();
   createOverlayWindow();
   createTray();
   registerHotkeys();
@@ -661,6 +853,6 @@ app.whenReady().then(() => {
 
   if (!config.get().general.onboarded) {
     config.patch({ general: { onboarded: true } });
-    createSettingsWindow('connect');
+    createAppWindow('home');
   }
 });
