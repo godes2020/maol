@@ -50,3 +50,10 @@ pub fn copy_text(text: &str) {
 pub fn other_moa_running() -> bool {
     false
 }
+
+/// Elsewhere the overlay draws its glow itself (the window has real alpha).
+pub fn set_glow(_glow: Option<super::Glow>) {}
+
+pub fn glow_owner(_window: &slint::Window) {}
+
+pub fn set_overlay_shape(_window: &slint::Window, _parts: &[(super::Rect, i32)]) {}
