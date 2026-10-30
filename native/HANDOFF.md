@@ -26,7 +26,7 @@ Native rewrite of Moa in Rust + Slint 1.18 (`native/`). The Electron 0.3.1 app i
    - Pixel-art mark snapped to whole pixels; icon-only buttons centre the icon exactly.
 
 8. Second round:
-   - Glow: a colour-keyed window can't hold soft alpha, so the glow is a separate layered window ("MoaGlow", `platform::win::set_glow`) kept just below the overlay. Its premultiplied bitmap is painted once per card shape; per-frame strength goes through `SourceConstantAlpha`. `App::sync_glow` feeds it the card rect, colours and beat.
+   - Glow behind the overlay: tried a separate layered window below the colour-keyed overlay; on the user's Windows it showed a black rectangle, so it was taken out (see commit e2aa3a5 for the code). The overlay has no outer glow while keyed.
    - YouTube Music volume goes through `#movie_player` (`setVolume`/`getVolume`/`mute`) and the page's own slider; setting `video.volume` was undone by its loudness normalisation. Other sites get the Moa volume re-applied on every `play()`.
    - Sliders: `for` over an array literal that reads `cfg` rebuilt the rows on every change and cut the drag short, so settings sliders are written out as `NumRow`. `Slider` keeps its own drag value instead of assigning `value`, which broke the parent's binding. The overlay seek bar drags too.
 

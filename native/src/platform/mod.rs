@@ -24,17 +24,3 @@ impl Rect {
         x >= self.x && y >= self.y && x < self.x + self.w && y < self.y + self.h
     }
 }
-
-/// What the glow under the overlay should look like.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Glow {
-    /// The overlay window, physical screen pixels.
-    pub win: Rect,
-    /// The card inside it, physical pixels relative to the window.
-    pub card: Rect,
-    pub radius: i32,
-    pub c1: (u8, u8, u8),
-    pub c2: (u8, u8, u8),
-    /// 0..1, drives the layer's opacity every frame.
-    pub strength: f32,
-}
