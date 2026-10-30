@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
+  <title>Moa Overlay</title>
+  <link rel="stylesheet" href="overlay.css">
+</head>
+<body>
+  <div id="card" class="card compact idle">
+    <div class="bg" aria-hidden="true">
+      <div class="bg-art" id="bgArt"></div>
+      <div class="bg-blob b1"></div>
+      <div class="bg-blob b2"></div>
+      <div class="bg-shade"></div>
+      <div class="bg-flash" id="flash"></div>
+    </div>
+
+    <div class="content">
+      <div class="top">
+        <div class="cover" id="cover">
+          <img id="art" alt="">
+          <div class="cover-empty" id="coverEmpty">
+            <svg viewBox="0 0 5 5" shape-rendering="crispEdges"><path d="M2 0h3v1H2zM1 1h1v1H1zM4 1h1v1H4zM0 2h1v3H0zM2 2h1v1H2zM4 2h1v1H4zM3 3h1v1H3zM1 4h2v1H1z"/></svg>
+          </div>
+          <svg class="ring" viewBox="0 0 56 56" aria-hidden="true">
+            <rect class="ring-track" x="1.5" y="1.5" width="53" height="53" rx="7" ry="7" pathLength="100"/>
+            <rect class="ring-fill" id="ring" x="1.5" y="1.5" width="53" height="53" rx="7" ry="7" pathLength="100"/>
+          </svg>
+        </div>
+
+        <div class="meta">
+          <div class="title"><span id="title"></span></div>
+          <div class="artist"><span id="artist"></span><span id="toast" class="toast"></span></div>
+        </div>
+
+        <button class="btn eq only-compact" id="eqCompact" data-cmd="toggleMute" data-tip="overlay.mute">
+          <span class="bars"><i></i><i></i><i></i><i></i><i></i></span>
+        </button>
+        <button class="btn play only-expanded" id="playBtn" data-cmd="playPause" data-tip="overlay.playPause">
+          <svg class="i-pause" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
+          <svg class="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>
+        </button>
+      </div>
+
+      <div class="progress only-expanded">
+        <span class="time" id="cur">0:00</span>
+        <div class="bar" id="bar">
+          <div class="bar-track"></div>
+          <div class="bar-fill" id="barFill"></div>
+          <div class="bar-knob" id="barKnob"></div>
+        </div>
+        <span class="time" id="rem">-0:00</span>
+      </div>
+
+      <div class="controls only-expanded">
+        <button class="btn eq" id="eqFull" data-cmd="toggleMute" data-tip="overlay.mute">
+          <span class="bars"><i></i><i></i><i></i><i></i><i></i></span>
+        </button>
+        <div class="spacer"></div>
+        <button class="btn" data-cmd="previous" data-tip="overlay.prev">
+          <svg viewBox="0 0 24 24"><path d="M6 5h2.5v14H6zM19 5.5v13L9.5 12z"/></svg>
+        </button>
+        <button class="btn" data-cmd="next" data-tip="overlay.next">
+          <svg viewBox="0 0 24 24"><path d="M15.5 5H18v14h-2.5zM5 5.5v13L14.5 12z"/></svg>
+        </button>
+        <button class="btn repeat" id="repeatBtn" data-cmd="cycleRepeat" data-tip="overlay.repeat">
+          <svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2zM17 17H7v-3l-4 4 4 4v-3h12v-6h-2z"/></svg>
+          <b class="one">1</b>
+        </button>
+        <div class="spacer"></div>
+        <button class="btn" data-cmd="showApp" data-tip="overlay.openApp">
+          <svg viewBox="0 0 24 24"><path d="M3 5h18v14H3zm2 2v10h14V7zm6 4h7v5h-7z"/></svg>
+        </button>
+        <button class="btn" data-cmd="toggleOverlay" data-tip="overlay.hide">
+          <svg viewBox="0 0 24 24"><path d="M6.4 5 12 10.6 17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="edit-hint">
+      <span id="editHint"></span> · <kbd id="editKey">Alt+Shift+M</kbd> <span id="editDone"></span>
+    </div>
+  </div>
+
+  <script src="../shared/i18n.js"></script>
+  <script src="overlay.js"></script>
+</body>
+</html>

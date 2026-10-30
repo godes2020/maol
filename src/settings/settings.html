@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
+  <title>Moa — Settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <header>
+    <img src="../../assets/icon.png" alt="" class="logo">
+    <div>
+      <h1>Moa</h1>
+      <p class="sub">Music Overlay App · <span data-i18n="settings.version"></span> <span id="version"></span></p>
+    </div>
+  </header>
+
+  <nav id="tabs">
+    <button data-tab="hotkeys" class="active" data-i18n="settings.hotkeys"></button>
+    <button data-tab="overlay" data-i18n="settings.overlay"></button>
+    <button data-tab="playback" data-i18n="settings.playback"></button>
+    <button data-tab="general" data-i18n="settings.general"></button>
+  </nav>
+
+  <main>
+    <section id="tab-hotkeys" class="tab active">
+      <p class="hint" data-i18n="settings.hotkeysHint"></p>
+      <div id="hotkeyMsg" class="msg" hidden></div>
+      <div id="hotkeyList" class="list"></div>
+      <button id="resetHotkeys" class="ghost" data-i18n="settings.resetHotkeys"></button>
+    </section>
+
+    <section id="tab-overlay" class="tab">
+      <label class="row switch"><span data-i18n="settings.overlayVisible"></span><input type="checkbox" data-path="overlay.visible"><i></i></label>
+      <label class="row switch"><span data-i18n="settings.overlayAlwaysExpanded"></span><input type="checkbox" data-path="overlay.alwaysExpanded"><i></i></label>
+      <label class="row switch"><span data-i18n="settings.overlayHideWhenIdle"></span><input type="checkbox" data-path="overlay.hideWhenIdle"><i></i></label>
+      <label class="row switch"><span data-i18n="settings.overlayReactive"></span><input type="checkbox" data-path="overlay.reactive"><i></i></label>
+      <label class="row range"><span data-i18n="settings.overlayIntensity"></span><input type="range" min="0.2" max="2" step="0.1" data-path="overlay.intensity"><output></output></label>
+      <label class="row range"><span data-i18n="settings.overlayOpacity"></span><input type="range" min="0.3" max="1" step="0.05" data-path="overlay.opacity" data-format="percent"><output></output></label>
+      <label class="row range"><span data-i18n="settings.overlayScale"></span><input type="range" min="0.7" max="1.6" step="0.05" data-path="overlay.scale" data-format="percent"><output></output></label>
+      <div class="buttons">
+        <button id="moveOverlay" data-i18n="settings.overlayMove"></button>
+        <button id="resetOverlay" class="ghost" data-i18n="settings.overlayReset"></button>
+      </div>
+    </section>
+
+    <section id="tab-playback" class="tab">
+      <label class="row range"><span data-i18n="settings.seekStep"></span><input type="range" min="1" max="30" step="1" data-path="playback.seekStep"><output></output></label>
+      <label class="row range"><span data-i18n="settings.volumeStep"></span><input type="range" min="1" max="20" step="1" data-path="playback.volumeStep"><output></output></label>
+    </section>
+
+    <section id="tab-general" class="tab">
+      <label class="row select">
+        <span data-i18n="settings.language"></span>
+        <select data-path="general.language">
+          <option value="auto" data-i18n="settings.languageAuto"></option>
+          <option value="en">English</option>
+          <option value="ru">Русский</option>
+        </select>
+      </label>
+      <p class="hint small" data-i18n="settings.restartNote"></p>
+      <label class="row switch"><span data-i18n="settings.autostart"></span><input type="checkbox" data-path="general.autostart"><i></i></label>
+      <label class="row switch"><span data-i18n="settings.closeToTray"></span><input type="checkbox" data-path="general.closeToTray"><i></i></label>
+      <label class="row switch"><span data-i18n="settings.startHidden"></span><input type="checkbox" data-path="general.startHidden"><i></i></label>
+      <p class="footer"><a href="https://github.com/godes2020/maol" target="_blank">github.com/godes2020/maol</a></p>
+    </section>
+  </main>
+
+  <script src="../shared/i18n.js"></script>
+  <script src="settings.js"></script>
+</body>
+</html>

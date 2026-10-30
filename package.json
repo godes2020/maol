@@ -1,0 +1,81 @@
+{
+  "name": "moa",
+  "productName": "Moa",
+  "version": "0.1.0",
+  "description": "Moa — Music Overlay App. YouTube Music desktop player with an in-game overlay and global hotkeys.",
+  "main": "src/main/main.js",
+  "author": "godes2020",
+  "license": "MIT",
+  "homepage": "https://github.com/godes2020/maol",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/godes2020/maol.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "check": "node scripts/check.js",
+    "dist": "electron-builder --win --x64",
+    "dist:dir": "electron-builder --dir",
+    "media": "node scripts/capture-media.js"
+  },
+  "build": {
+    "appId": "io.github.godes2020.moa",
+    "productName": "Moa",
+    "copyright": "Copyright © 2026 godes2020",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Moa",
+      "multiLanguageInstaller": true,
+      "installerLanguages": [
+        "en_US",
+        "ru_RU"
+      ],
+      "artifactName": "Moa-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Moa-${version}-portable.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "godes2020",
+        "repo": "maol",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  }
+}
