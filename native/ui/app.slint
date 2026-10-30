@@ -78,12 +78,15 @@ component TabButton inherits Rectangle {
     VerticalLayout {
         alignment: center;
         spacing: 2px;
-        Icon {
-            source: root.icon;
-            width: 20px;
+        // A fixed-width child would cap the layout's max width, so the icon sits in a free-width row.
+        Rectangle {
             height: 20px;
-            x: (parent.width - self.width) / 2;
-            colorize: root.active ? Theme.c1.brighter(0.35) : (ta.has-hover ? Palette.muted : Palette.faint);
+            Icon {
+                source: root.icon;
+                width: 20px;
+                height: 20px;
+                colorize: root.active ? Theme.c1.brighter(0.35) : (ta.has-hover ? Palette.muted : Palette.faint);
+            }
         }
         Text {
             horizontal-alignment: center;
@@ -143,6 +146,8 @@ component Platform inherits Rectangle {
     in property <color> tile;
     in property <color> fg: white;
     callback clicked;
+    // Same preferred width for every tile, so the stretch splits the row evenly.
+    preferred-width: 60px;
     height: 78px;
     border-radius: 16px;
     background: ta.has-hover ? Palette.panel-hi : Palette.panel;
@@ -152,14 +157,16 @@ component Platform inherits Rectangle {
         alignment: center;
         spacing: 7px;
         Rectangle {
-            x: (parent.width - self.width) / 2;
-            width: 38px;
             height: 38px;
-            border-radius: 12px;
-            background: root.tile;
-            border-width: 1px;
-            border-color: #ffffff1f;
-            Icon { source: root.icon; width: 21px; height: 21px; colorize: root.fg; }
+            Rectangle {
+                width: 38px;
+                height: 38px;
+                border-radius: 12px;
+                background: root.tile;
+                border-width: 1px;
+                border-color: #ffffff1f;
+                Icon { source: root.icon; width: 21px; height: 21px; colorize: root.fg; }
+            }
         }
         Text { horizontal-alignment: center; text: root.name; color: Palette.muted; font-size: 11px; overflow: elide; }
     }
@@ -284,7 +291,7 @@ component GuideSection inherits Rectangle {
                     background: Palette.panel-hi;
                     Icon { source: Icons.get(root.item.icon); width: 16px; height: 16px; colorize: Palette.text; }
                 }
-                Text { vertical-alignment: center; horizontal-stretch: 1; text: root.item.title; color: Palette.text; font-size: 13.5px; font-weight: 600; }
+                Text { vertical-alignment: center; horizontal-stretch: 1; text: root.item.title; color: Palette.text; font-size: 13.5px; font-weight: 600; overflow: elide; }
                 Text { vertical-alignment: center; text: root.open ? "−" : "+"; color: Palette.faint; font-size: 18px; }
             }
             TouchArea { mouse-cursor: pointer; clicked => { root.open = !root.open; } }
