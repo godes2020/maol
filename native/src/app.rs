@@ -530,6 +530,9 @@ impl App {
         pointer.start(TimerMode::Repeated, Duration::from_millis(60), move || {
             if let Some(app) = w.upgrade() {
                 app.tick_hover();
+                if app.overlay.window().is_visible() {
+                    platform::ensure_overlay_style(app.overlay.window());
+                }
                 // Moved by dragging in edit mode.
                 let p = app.overlay.window().position();
                 if (p.x, p.y) != app.last_pos.get() && app.resize.borrow().is_none() {

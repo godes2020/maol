@@ -50,3 +50,5 @@ pub fn copy_text(text: &str) {
 pub fn other_moa_running() -> bool {
     false
 }
+
+pub fn ensure_overlay_style(_window: &slint::Window) {}

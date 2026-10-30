@@ -73,30 +73,76 @@ pub fn prepare_overlay(window: &slint::Window) {
         w.set_window_level(slint::winit_030::winit::window::WindowLevel::AlwaysOnTop);
         w.set_skip_taskbar(true);
     });
+    if let Some(h) = hwnd(window) {
+        guard_style(h);
+    }
     keep_on_top(window);
 }
 
-/// Our extended styles. winit rewrites them whenever one of its own flags
-/// changes (show, hide, window level), so they are put back on every call.
+/// The extended style the overlay must have, given what is there now.
+fn wanted_ex(ex: isize) -> isize {
+    let mut want = (ex | WS_EX_TOOLWINDOW.0 as isize | WS_EX_NOACTIVATE.0 as isize) & !(WS_EX_APPWINDOW.0 as isize);
+    want &= !(WS_EX_TRANSPARENT.0 as isize | WS_EX_LAYERED.0 as isize);
+    if CLICK_THROUGH.load(Ordering::Relaxed) {
+        want |= WS_EX_TRANSPARENT.0 as isize | WS_EX_LAYERED.0 as isize;
+    }
+    if overlay_keyed() {
+        want |= WS_EX_LAYERED.0 as isize;
+    }
+    want
+}
+
+/// Our extended styles. winit rewrites the whole extended style whenever one
+/// of its own flags changes (show, hide, focus, window level), which drops
+/// WS_EX_LAYERED and with it the colour key: the overlay turned black. The
+/// overlay's window procedure now vetoes that (`overlay_proc`); this puts
+/// the styles and the key back should they still go missing.
 fn apply_style(h: HWND) {
-    let keyed = overlay_keyed();
-    let through = CLICK_THROUGH.load(Ordering::Relaxed);
     unsafe {
         let ex = GetWindowLongPtrW(h, GWL_EXSTYLE);
-        let mut want = (ex | WS_EX_TOOLWINDOW.0 as isize | WS_EX_NOACTIVATE.0 as isize) & !(WS_EX_APPWINDOW.0 as isize);
-        want &= !(WS_EX_TRANSPARENT.0 as isize | WS_EX_LAYERED.0 as isize);
-        if through {
-            want |= WS_EX_TRANSPARENT.0 as isize | WS_EX_LAYERED.0 as isize;
-        }
-        if keyed {
-            want |= WS_EX_LAYERED.0 as isize;
-        }
+        let want = wanted_ex(ex);
         if want != ex {
             SetWindowLongPtrW(h, GWL_EXSTYLE, want);
         }
-        if keyed && (want != ex || ex & WS_EX_LAYERED.0 as isize == 0) {
-            let _ = SetLayeredWindowAttributes(h, KEY, 255, LWA_COLORKEY);
+        if overlay_keyed() {
+            let (mut key, mut alpha, mut flags) = (COLORREF(0), 0u8, LAYERED_WINDOW_ATTRIBUTES_FLAGS(0));
+            let ok = GetLayeredWindowAttributes(h, Some(&mut key), Some(&mut alpha), Some(&mut flags)).is_ok();
+            if want != ex || !ok || key != KEY || flags.0 & LWA_COLORKEY.0 == 0 {
+                let _ = SetLayeredWindowAttributes(h, KEY, 255, LWA_COLORKEY);
+                use windows::Win32::Graphics::Gdi::{RedrawWindow, RDW_ALLCHILDREN, RDW_FRAME, RDW_INVALIDATE};
+                let _ = RedrawWindow(Some(h), None, None, RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN);
+            }
         }
+    }
+}
+
+static OLD_PROC: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
+
+/// Sits in front of winit's window procedure and keeps our extended styles
+/// in every style change winit makes.
+unsafe extern "system" fn overlay_proc(h: HWND, msg: u32, wp: windows::Win32::Foundation::WPARAM, lp: windows::Win32::Foundation::LPARAM) -> windows::Win32::Foundation::LRESULT {
+    if msg == WM_STYLECHANGING && wp.0 as i32 == GWL_EXSTYLE.0 && lp.0 != 0 {
+        let ss = &mut *(lp.0 as *mut STYLESTRUCT);
+        ss.styleNew = wanted_ex(ss.styleNew as isize) as u32;
+    }
+    let old: WNDPROC = std::mem::transmute::<isize, WNDPROC>(OLD_PROC.load(Ordering::Relaxed));
+    CallWindowProcW(old, h, msg, wp, lp)
+}
+
+fn guard_style(h: HWND) {
+    if OLD_PROC.load(Ordering::Relaxed) != 0 {
+        return;
+    }
+    unsafe {
+        let old = SetWindowLongPtrW(h, GWLP_WNDPROC, overlay_proc as *const () as isize);
+        OLD_PROC.store(old, Ordering::Relaxed);
+    }
+}
+
+/// Called often (every pointer check) so a lost colour key never lasts.
+pub fn ensure_overlay_style(window: &slint::Window) {
+    if let Some(h) = hwnd(window) {
+        apply_style(h);
     }
 }
 
