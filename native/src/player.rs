@@ -49,7 +49,7 @@ mod imp {
     use std::cell::RefCell;
     use std::sync::Mutex;
     use wry::dpi::{LogicalPosition, LogicalSize};
-    use wry::{Rect, WebContext, WebView, WebViewBuilder};
+    use wry::{MemoryUsageLevel, Rect, WebContext, WebView, WebViewBuilder, WebViewBuilderExtWindows, WebViewExtWindows};
 
     struct Player {
         win: PlayerWindow,
@@ -72,6 +72,7 @@ mod imp {
             let Some(p) = p.as_ref() else { return false };
             let _ = p.win.show();
             if let Some(v) = &p.view {
+                let _ = v.set_memory_usage_level(MemoryUsageLevel::Normal);
                 let _ = v.focus();
             }
             true
@@ -87,6 +88,16 @@ mod imp {
                     let _ = v.set_bounds(bounds(w, h));
                 }
             })
+        });
+        // Hidden, the page keeps playing but the engine is asked to give
+        // back what memory it can.
+        win.window().on_close_requested(|| {
+            PLAYER.with(|p| {
+                if let Some(v) = p.borrow().as_ref().and_then(|p| p.view.as_ref()) {
+                    let _ = v.set_memory_usage_level(MemoryUsageLevel::Low);
+                }
+            });
+            slint::CloseRequestResponse::HideWindow
         });
         if win.show().is_err() {
             return;
@@ -109,6 +120,11 @@ mod imp {
                 .with_initialization_script(include_str!("player-bridge.js"))
                 .with_ipc_handler(|req| on_message(req.body()))
                 .with_background_color((3, 3, 3, 255))
+                // wry's defaults, plus one page process instead of a spare
+                // set and no background traffic the player does not need.
+                .with_additional_browser_args(
+                    "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --renderer-process-limit=1 --disable-background-networking",
+                )
                 .with_bounds(bounds(size.width, size.height))
                 .build_as_child(&handle);
             match result {

@@ -17,6 +17,14 @@ Settings carry over from Moa 0.3.1 (`%APPDATA%\Moa`). 0.3.1 can stay installed: 
 
 Настройки переносятся из Moa 0.3.1 (`%APPDATA%\Moa`). 0.3.1 можно не удалять: просто закрой её перед запуском тестовой версии.
 
+## Fixed in this build / Исправлено в этой сборке
+
+- The overlay no longer has a black background and stays a floating layer, not a separate window · У оверлея больше нет чёрного фона, и он остаётся плавающим слоем, а не отдельным окном
+- The beat animation works with the built-in player too · Анимация под бит работает и со встроенным плеером
+- The home logo and its animation are drawn on whole pixels; icon buttons are centred · Логотип на главной и его анимация рисуются по целым пикселям; иконки в кнопках по центру
+- Hotkeys taken by the old Moa 0.3 are retried automatically, and Moa says what holds them · Бинды, занятые старой Moa 0.3, назначаются повторно сами, и Moa пишет, кто их держит
+- Less CPU and memory: no redraws while music is paused; the player uses one renderer process and frees memory when hidden · Меньше нагрузка на процессор и память: без перерисовки на паузе; плеер работает в одном процессе отрисовки и освобождает память, когда скрыт
+
 ## What to check / Что проверить
 
 - Music from any player shows on Home and in the overlay · Музыка из любого плеера видна на главной и в оверлее
@@ -24,5 +32,5 @@ Settings carry over from Moa 0.3.1 (`%APPDATA%\Moa`). 0.3.1 can stay installed: 
 - Moving and resizing the overlay (Alt+Shift+M), Card and Cover styles · Перемещение и размер оверлея (Alt+Shift+M), виды «Карточка» и «Обложка»
 - Tray icon, close to tray, start with Windows · Иконка в трее, сворачивание в трей, автозапуск
 - Memory use in Task Manager · Потребление памяти в диспетчере задач
-- Built-in player: Settings → Source → Player, pick a service, Open player; sign in once, then controls and the overlay work · Встроенный плеер: Настройки → Источник → Плеер, выбери сервис, «Открыть плеер»; войди один раз, дальше работают управление и оверлей
+- Built-in player: Settings → Music source → Player in Moa, pick a service, Open player; sign in once, then controls and the overlay work · Встроенный плеер: Настройки → Откуда музыка → Плеер в Moa, выбери сервис, «Открыть плеер»; войди один раз, дальше работают управление и оверлей
 - Spotify: Settings → Spotify account, paste your Client ID (Guide → Spotify) and sign in in the browser · Spotify: Настройки → Аккаунт Spotify, вставь свой Client ID (Гайд → Spotify) и войди в браузере

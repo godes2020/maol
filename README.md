@@ -50,7 +50,7 @@
 
 ### 🧪 Native preview 0.5.0
 
-A rewrite of Moa in Rust is available for testing: **one 11 MB `.exe`, no installer, about 10 MB of private memory at idle** (38 MB working set; measured on Windows in CI).
+A rewrite of Moa in Rust is available for testing: **one ~22 MB `.exe`, no installer, about 10 MB of private memory at idle** (38 MB working set; measured on Windows in CI).
 Download `Moa-0.5.0-preview-x64.exe` from the [**v0.5.0 pre-release**](https://github.com/godes2020/maol/releases/tag/v0.5.0) and run it. It is new in this build:
 - **Built-in player**: Yandex Music, SoundCloud, VK or YouTube Music in a WebView2 window (*Settings → Music source → Player in Moa → Open player*). The browser engine is loaded only when you open it.
 - **Spotify sign-in** with the official OAuth (PKCE) flow; see the in-app guide for the Client ID.

@@ -137,8 +137,11 @@ component Cover inherits Rectangle {
         background: @linear-gradient(135deg, Theme.c1.with-alpha(0.35) 0%, Theme.c2.with-alpha(0.25) 100%);
         Icon {
             source: @image-url("icons/mark.svg");
-            width: parent.width * 0.4;
+            width: 5phx * max(1, round(parent.width * 0.4 / 5phx));
             height: self.width;
+            x: 1phx * round((parent.width - self.width) / 2phx);
+            y: 1phx * round((parent.height - self.height) / 2phx);
+            image-rendering: pixelated;
         }
     }
     // Track of the ring.
@@ -180,13 +183,16 @@ export component Overlay inherits Window {
     in property <float> intensity: 1;
     in property <float> card-opacity: 1;
     in property <string> edit-key: "Alt+Shift+M";
+    // Windows cuts this colour out of the window (CPU drawing has no alpha
+    // there), so soft glows that would bleed into it are left off.
+    in property <bool> keyed;
 
     callback drag();
     callback grip(bool);
 
     no-frame: true;
     always-on-top: true;
-    background: transparent;
+    background: keyed ? #010203 : transparent;
     title: "Moa Overlay";
 
     property <length> u: 1px * scale;
@@ -223,13 +229,13 @@ export component Overlay inherits Window {
             border-radius: 12 * root.u;
             clip: true;
             background: #121214;
-            drop-shadow-blur: (6 + 16 * root.glow) * root.u;
+            drop-shadow-blur: root.keyed ? 0 : (6 + 16 * root.glow) * root.u;
             drop-shadow-color: Theme.c1.with-alpha(0.16 + 0.34 * root.glow);
             drop-shadow-offset-y: 2 * root.u;
 
             // Moving, blurred cover in the background.
             if Track.has-art: Image {
-                property <float> t: animation-tick() / 14000ms;
+                property <float> t: Track.clock / 14000ms;
                 x: (parent.width - self.width) / 2;
                 y: (parent.height - self.height) / 2;
                 width: 420 * root.u * (1 + 0.06 * (1 - cos(t * 180deg)));
@@ -242,7 +248,7 @@ export component Overlay inherits Window {
             }
             // Two soft colour blobs drifting around.
             Rectangle {
-                property <float> t: animation-tick() / 11000ms;
+                property <float> t: Track.clock / 11000ms;
                 x: (-60 + 70 * (1 - cos(t * 180deg))) * root.u;
                 y: (-90 + 20 * (1 - cos(t * 180deg))) * root.u;
                 width: 220 * root.u;
@@ -251,7 +257,7 @@ export component Overlay inherits Window {
                 opacity: 0.26 + 0.3 * Track.energy * root.intensity + 0.25 * root.glow;
             }
             Rectangle {
-                property <float> t: animation-tick() / 13000ms;
+                property <float> t: Track.clock / 13000ms;
                 x: parent.width - (150 + 75 * (1 - cos(t * 180deg))) * root.u;
                 y: parent.height - (110 - 15 * (1 - cos(t * 180deg))) * root.u;
                 width: 220 * root.u;
@@ -285,7 +291,7 @@ export component Overlay inherits Window {
                 clip: true;
                 Text {
                     property <length> over: max(0, self.preferred-width - parent.width);
-                    property <float> t: mod(animation-tick() / max(6000ms, 1ms * over / 1px * 55), 1);
+                    property <float> t: mod(Track.clock / max(6000ms, 1ms * over / 1px * 55), 1);
                     x: root.cover-right && over == 0 ? parent.width - self.preferred-width
                         : over > 4px ? -over * max(0, min(1, (t - 0.15) / 0.7)) : 0;
                     y: 0;
@@ -388,7 +394,7 @@ export component Overlay inherits Window {
         // ---- Cover style ----
         if root.layout-cover: Rectangle {
             // Beat glow behind the cover.
-            Rectangle {
+            if !root.keyed: Rectangle {
                 x: -12 * root.u;
                 y: -12 * root.u;
                 width: parent.width + 24 * root.u;
@@ -398,7 +404,7 @@ export component Overlay inherits Window {
             }
             Rectangle {
                 border-radius: 14 * root.u;
-                drop-shadow-blur: 14 * root.u;
+                drop-shadow-blur: root.keyed ? 0 : 14 * root.u;
                 drop-shadow-color: #00000073;
                 drop-shadow-offset-y: 4 * root.u;
                 background: #121214;
@@ -500,7 +506,7 @@ export component Overlay inherits Window {
         background: #121118f0;
         border-width: 1px;
         border-color: #ffffff14;
-        drop-shadow-blur: 12 * root.u;
+        drop-shadow-blur: root.keyed ? 0 : 12 * root.u;
         drop-shadow-color: #00000066;
         TouchArea {
             mouse-cursor: move;

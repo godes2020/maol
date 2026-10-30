@@ -23,6 +23,12 @@ pub fn cursor_pos() -> Option<(i32, i32)> {
     None
 }
 
+pub fn set_overlay_keyed(_on: bool) {}
+
+pub fn overlay_keyed() -> bool {
+    false
+}
+
 pub fn prepare_overlay(window: &slint::Window) {
     window.with_winit_window(|w| w.set_window_level(slint::winit_030::winit::window::WindowLevel::AlwaysOnTop));
 }
@@ -39,4 +45,8 @@ pub fn set_autostart(_on: bool) {}
 
 pub fn copy_text(text: &str) {
     println!("{text}");
+}
+
+pub fn other_moa_running() -> bool {
+    false
 }

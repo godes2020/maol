@@ -15,6 +15,15 @@ Native rewrite of Moa in Rust + Slint 1.18 (`native/`). The Electron 0.3.1 app i
 5. WebView2 player (`src/player.rs`, `src/player-bridge.js`, `ui/player.slint`): wry 0.57 builds a child webview in a Slint window on first open. The bridge reads Media Session and media elements and runs commands through the site's own media-key handlers.
 6. README/INSTALL now have a "Native preview 0.5.0" section. Idle RAM on Windows (CI smoke test) is **10.6 MB private, 38.3 MB working set**.
 
+7. Feedback fixes after the first 0.5.0 test:
+   - Overlay on the software renderer is a layered window with color key RGB(1,2,3) (`platform::win::apply_style`). Glows outside the card are off when keyed. The GPU renderer keeps real alpha.
+   - winit rewrites GWL_EXSTYLE on show/hide, so `keep_on_top` (every 3 s) and `set_click_through` re-apply TOOLWINDOW|NOACTIVATE.
+   - Beat analysis (WASAPI loopback) runs for every source while music plays.
+   - Animations use `Track.clock`, which only advances while playing, instead of `animation-tick()`.
+   - WebView2: one renderer process, no background networking, `MemoryUsageLevel::Low` while hidden.
+   - Hotkeys: failed ones are retried every 5 s; the message names the old Moa 0.3 when `Moa.exe` is running.
+   - Pixel-art mark snapped to whole pixels; icon-only buttons centre the icon exactly.
+
 ## Next steps
 - Wait for user feedback on 0.5.0. The built-in player and Spotify were not tested by hand on Windows: CI only checks that the app starts.
 - Spotify is sign-in only for now. Next: playlists and playback control through the Web API (`user-modify-playback-state` is already in the scopes).

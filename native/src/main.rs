@@ -41,6 +41,7 @@ fn main() {
             "software"
         };
         let _ = slint::BackendSelector::new().backend_name("winit".into()).renderer_name(renderer.into()).select();
+        platform::set_overlay_keyed(renderer != "skia");
     }
 
     let hidden = std::env::args().any(|a| a == "--hidden");

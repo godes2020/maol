@@ -82,6 +82,7 @@ component TabButton inherits Rectangle {
         Rectangle {
             height: 20px;
             Icon {
+                x: round((parent.width - self.width) / 2 / 1phx) * 1phx;
                 source: root.icon;
                 width: 20px;
                 height: 20px;
@@ -165,7 +166,7 @@ component Platform inherits Rectangle {
                 background: root.tile;
                 border-width: 1px;
                 border-color: #ffffff1f;
-                Icon { source: root.icon; width: 21px; height: 21px; colorize: root.fg; }
+                Icon { source: root.icon; width: 20px; height: 20px; colorize: root.fg; }
             }
         }
         Text { horizontal-alignment: center; text: root.name; color: Palette.muted; font-size: 11px; overflow: elide; }
@@ -422,7 +423,7 @@ export component AppWindow inherits Window {
                     Rectangle {
                         height: 238px;
                         Rectangle {
-                            x: (parent.width - self.width) / 2 + 12px;
+                            x: (parent.width - self.width) / 2;
                             y: 18px;
                             width: 196px;
                             height: 196px;
@@ -441,11 +442,15 @@ export component AppWindow inherits Window {
                             clip: true;
                             background: @linear-gradient(135deg, Theme.c1.with-alpha(0.35) 0%, Theme.c2.with-alpha(0.25) 100%);
                             if Track.has-art && Track.has-track: Image { width: parent.width; height: parent.height; source: Track.art; image-fit: cover; }
+                            // The mark is 5×5 pixel art: whole device pixels per
+                            // cell and a pixel-aligned position keep it crisp.
                             if !(Track.has-art && Track.has-track): Icon {
-                                property <float> t: Track.has-track ? 0 : animation-tick() / 2400ms;
                                 source: @image-url("icons/mark.svg");
-                                width: 64px * (1 + 0.04 * (1 - cos(t * 360deg)));
+                                width: 5phx * round(64px / 5phx);
                                 height: self.width;
+                                x: 1phx * round((parent.width - self.width) / 2phx);
+                                y: 1phx * round((parent.height - self.height) / 2phx);
+                                image-rendering: pixelated;
                             }
                         }
                     }

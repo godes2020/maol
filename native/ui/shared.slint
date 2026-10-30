@@ -38,6 +38,9 @@ export global Track {
     in property <float> energy;
     in property <float> pulse;
     in property <[float]> bands: [0, 0, 0, 0, 0];
+    // Runs only while music plays, at the audio frame rate; drives the slow
+    // drifting effects so a paused overlay costs no redraws at all.
+    in property <duration> clock;
     in property <string> toast;
     in property <bool> toasting;
 

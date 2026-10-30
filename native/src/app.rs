@@ -80,6 +80,8 @@ pub struct App {
     target: RefCell<AudioFrame>,
     shown: RefCell<Shown>,
     beat_period: Cell<f32>,
+    clock: Cell<f64>,
+    last_bands: Cell<[f32; 5]>,
     last_frame: Cell<Instant>,
     audio_on: Cell<bool>,
 
@@ -101,6 +103,7 @@ impl App {
         let cfg = Config::load();
         let t = Strings::new(&cfg.general.language);
         let overlay = Overlay::new().expect("overlay window");
+        overlay.set_keyed(platform::overlay_keyed());
         let system = media::system(std::sync::Arc::new(|ev| post(move |app| app.on_system(ev))));
         let connector = Connector::start(|ev| post(move |app| app.on_extension(ev)));
         let hotkeys = Hotkeys::new(|action| post(move |app| app.run_action(&action)));
@@ -129,6 +132,8 @@ impl App {
             target: RefCell::new(AudioFrame::default()),
             shown: RefCell::new(Shown::default()),
             beat_period: Cell::new(0.5),
+            clock: Cell::new(0.0),
+            last_bands: Cell::new([0.0; 5]),
             last_frame: Cell::new(Instant::now()),
             audio_on: Cell::new(false),
             editing: Cell::new(false),
@@ -500,6 +505,19 @@ impl App {
         });
         timers.push(pointer);
 
+        // Keys someone else held may free up (the old Moa was closed).
+        let w = Rc::downgrade(self);
+        let keys = Timer::default();
+        keys.start(TimerMode::Repeated, Duration::from_secs(5), move || {
+            if let Some(app) = w.upgrade() {
+                let waiting = app.capturing.borrow().is_empty() && !app.hotkeys.borrow().failed.is_empty();
+                if waiting && app.hotkeys.borrow_mut().retry() {
+                    app.push_app();
+                }
+            }
+        });
+        timers.push(keys);
+
         let w = Rc::downgrade(self);
         let top = Timer::default();
         top.start(TimerMode::Repeated, Duration::from_secs(3), move || {
@@ -573,11 +591,20 @@ impl App {
         let (e, p, bands) = (sh.energy, sh.pulse, sh.bands);
         drop(sh);
         drop(tgt);
-        let model: ModelRc<f32> = ModelRc::new(VecModel::from(bands.to_vec()));
+        if playing {
+            self.clock.set(self.clock.get() + dt as f64);
+        }
+        let clock = (self.clock.get() * 1000.0) as i64;
+        // A new model always counts as a change; skip it when nothing moved
+        // so an idle overlay is not redrawn.
+        let model: Option<ModelRc<f32>> = (bands != self.last_bands.replace(bands)).then(|| ModelRc::new(VecModel::from(bands.to_vec())));
         self.each_track(|t| {
             t.set_energy(e);
             t.set_pulse(p);
-            t.set_bands(model.clone());
+            if let Some(m) = &model {
+                t.set_bands(m.clone());
+            }
+            t.set_clock(clock);
         });
         still
     }
@@ -631,11 +658,7 @@ impl App {
                     self.load_art(Some(key));
                 }
             }
-            Event::Audio(a) => {
-                if self.source() == "system" && !self.via_extension() {
-                    self.on_audio(a);
-                }
-            }
+            Event::Audio(a) => self.on_audio(a),
             Event::Status { ready, error } => {
                 *self.media_status.borrow_mut() = (ready, error);
                 self.update_audio();
@@ -775,13 +798,10 @@ impl App {
         *self.art.borrow_mut() = art;
     }
 
-    /// The beat analysis runs only with the system source, while music
-    /// plays and the glow is on.
+    /// The beat analysis listens to the speakers, so it works for every
+    /// source; it runs only while music plays and the glow is on.
     fn update_audio(&self) {
-        let on = self.source() == "system"
-            && !self.via_extension()
-            && self.cfg.borrow().overlay.reactive
-            && self.state.borrow().playing;
+        let on = self.cfg.borrow().overlay.reactive && self.state.borrow().playing;
         if on != self.audio_on.get() {
             self.audio_on.set(on);
             self.system.set_audio(on);
@@ -1264,7 +1284,15 @@ impl App {
         w.set_capturing(self.capturing.borrow().clone().into());
         let mut msg = self.hk_msg.borrow().clone();
         if msg.is_empty() && !failed.is_empty() {
-            msg = self.t.tv("hk.failed", &[("keys", &failed.join(", "))]);
+            let keys = failed.join(", ");
+            let error = self.hotkeys.borrow().error.clone();
+            msg = if let Some(e) = error {
+                self.t.tv("hk.error", &[("keys", &keys), ("error", &e)])
+            } else if platform::other_moa_running() {
+                self.t.tv("hk.oldMoa", &[("keys", &keys)])
+            } else {
+                self.t.tv("hk.failed", &[("keys", &keys)])
+            };
         }
         w.set_hk_msg(msg.into());
         w.set_restart_note(self.restart_note.get());
