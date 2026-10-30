@@ -26,10 +26,9 @@ Native rewrite of Moa in Rust + Slint 1.18 (`native/`). The Electron 0.3.1 app i
    - Pixel-art mark snapped to whole pixels; icon-only buttons centre the icon exactly.
 
 8. Second round:
-   - Tried clipping the overlay with `SetWindowRgn` (commit 4a6a198): when the card collapsed, a gap showed, went black and then vanished, so it was reverted to the e2aa3a5 overlay, which the user confirmed works.
-   - Glow: a colour-keyed window can't hold soft alpha, so the glow is a separate layered window ("MoaGlow", `platform::win::set_glow`) kept just below the overlay. Its premultiplied bitmap is painted once per card shape; per-frame strength goes through `SourceConstantAlpha`. `App::sync_glow` feeds it the card rect, colours and beat.
+   - Overlay: a glow window below the overlay (e2aa3a5) and clipping the overlay with `SetWindowRgn` (4a6a198) were both tried and reverted; the user found the 6814912 overlay the most reliable. The overlay code (`app.rs`, `platform/`, `overlay.slint`) is the 6814912 one: colour key, no outer glow.
    - YouTube Music volume goes through `#movie_player` (`setVolume`/`getVolume`/`mute`) and the page's own slider; setting `video.volume` was undone by its loudness normalisation. Other sites get the Moa volume re-applied on every `play()`.
-   - Sliders: `for` over an array literal that reads `cfg` rebuilt the rows on every change and cut the drag short, so settings sliders are written out as `NumRow`. `Slider` keeps its own drag value instead of assigning `value`, which broke the parent's binding. The overlay seek bar drags too.
+   - Sliders: `for` over an array literal that reads `cfg` rebuilt the rows on every change and cut the drag short, so settings sliders are written out as `NumRow`. `Slider` keeps its own drag value instead of assigning `value`, which broke the parent's binding.
 
 ## Next steps
 - Wait for user feedback on 0.5.0. The built-in player and Spotify were not tested by hand on Windows: CI only checks that the app starts.
