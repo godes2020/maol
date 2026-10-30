@@ -69,10 +69,13 @@ body.anchor-bottom .box { flex-direction: column-reverse; }
   margin: -210px 0 0 -210px;
   background-size: cover;
   background-position: center;
-  filter: blur(28px) saturate(1.5) brightness(calc(.9 + .35 * var(--pulse) * var(--intensity)));
+  /* The image is a tiny, pre-saturated copy of the cover: stretched this
+     far it is already soft, so no blur filter (which is costly to redraw)
+     is needed. */
+  image-rendering: auto;
   opacity: .55;
   animation: breathe 14s ease-in-out infinite alternate;
-  will-change: transform, filter;
+  will-change: transform;
 }
 
 .bg-blob {
@@ -80,18 +83,17 @@ body.anchor-bottom .box { flex-direction: column-reverse; }
   width: 220px;
   height: 220px;
   border-radius: 50%;
-  filter: blur(30px);
   mix-blend-mode: screen;
   opacity: calc(.26 + .3 * var(--e) * var(--intensity) + .25 * var(--pulse) * var(--intensity));
-  will-change: transform, opacity;
+  will-change: transform;
 }
 .bg-blob.b1 {
-  background: radial-gradient(circle, rgba(var(--c1), .95), transparent 65%);
+  background: radial-gradient(circle, rgba(var(--c1), .8), rgba(var(--c1), .25) 40%, transparent 70%);
   left: -60px; top: -90px;
   animation: drift1 11s ease-in-out infinite alternate;
 }
 .bg-blob.b2 {
-  background: radial-gradient(circle, rgba(var(--c2), .9), transparent 65%);
+  background: radial-gradient(circle, rgba(var(--c2), .75), rgba(var(--c2), .22) 40%, transparent 70%);
   right: -70px; bottom: -110px;
   animation: drift2 13s ease-in-out infinite alternate;
 }
@@ -169,7 +171,7 @@ body.anchor-bottom .box { flex-direction: column-reverse; }
   stroke: rgb(var(--c1));
   stroke-linecap: round;
   stroke-dasharray: calc(var(--progress) * 100) 100;
-  filter: drop-shadow(0 0 calc(2px + 5px * var(--pulse) * var(--intensity)) rgba(var(--c1), .9));
+  filter: drop-shadow(0 0 3px rgba(var(--c1), .9));
   transition: stroke-dasharray .25s linear, stroke .6s;
 }
 
@@ -331,8 +333,7 @@ body.side-right .bg-flash { background: radial-gradient(120% 160% at 88% 50%, rg
   position: absolute;
   inset: -10px;
   border-radius: 22px;
-  background: radial-gradient(closest-side, rgba(var(--c1), .9), rgba(var(--c2), .45) 60%, transparent);
-  filter: blur(10px);
+  background: radial-gradient(closest-side, rgba(var(--c1), .9), rgba(var(--c2), .5) 55%, rgba(var(--c2), .15) 80%, transparent);
   opacity: 0;
   transition: opacity .4s;
   pointer-events: none;

@@ -282,6 +282,7 @@ async function captureApp() {
       await win.waitForTimeout(500);
       const name = shot.idle ? `app-idle-${shot.lang}` : `app-${tab}-${shot.lang}`;
       await win.screenshot({ path: path.join(MEDIA, `${name}.png`) });
+      console.log('captured', name);
     }
     await app.close();
     fs.rmSync(userData, { recursive: true, force: true });

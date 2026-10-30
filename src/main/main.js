@@ -22,8 +22,8 @@ const ROOT = path.join(__dirname, '..', '..');
 const ICON = path.join(ROOT, 'assets', 'icon.png');
 const TRAY_ICON = path.join(ROOT, 'assets', 'tray.png');
 const GUIDE_URL = {
-  en: 'https://github.com/godes2020/maol/blob/HEAD/docs/INSTALL.md#3-connect-your-browser',
-  ru: 'https://github.com/godes2020/maol/blob/HEAD/docs/INSTALL.ru.md#3-подключи-браузер'
+  en: 'https://github.com/godes2020/maol/blob/HEAD/docs/INSTALL.md#optional-browser-extension',
+  ru: 'https://github.com/godes2020/maol/blob/HEAD/docs/INSTALL.ru.md#необязательно-расширение-для-браузера'
 };
 
 // YouTube's cookie dialog can end up with dark text on a dark background

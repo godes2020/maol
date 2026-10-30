@@ -10,8 +10,8 @@
 
 ## Requirements
 
-- Windows 10 or Windows 11 (64-bit)
-- A browser: Google Chrome, Microsoft Edge, Yandex Browser, Opera, Brave, or Firefox / Zen 128+
+- Windows 10 (version 1809 or newer) or Windows 11, 64-bit
+- Any music player: a website in any browser, or a desktop app such as Spotify or Yandex Music
 - About 300 MB of free disk space
 
 ## 1. Download
@@ -22,90 +22,76 @@ Open the [**latest release**](https://github.com/godes2020/maol/releases/latest)
 |---|---|
 | `Moa-Setup-x.y.z.exe` | **Recommended.** A normal installer with Start menu and desktop shortcuts and an uninstaller. |
 | `Moa-x.y.z-portable.exe` | A single file that runs without installation. |
-| `Moa-Connector-extension.zip` | The browser extension on its own. The installer already includes it, so you only need this zip with the portable version. |
-| `Moa-Connector-firefox.xpi` | The same extension packed for Firefox and Zen. |
+| `Moa-Connector-extension.zip`, `Moa-Connector-firefox.xpi` | The optional browser extension (see [below](#optional-browser-extension)). Most people don't need it. |
 
-## 2. Install Moa
+## 2. Install
 
 1. Double-click `Moa-Setup-x.y.z.exe`.
 2. **If Windows shows a blue “Windows protected your PC” window**, click **More info**, then **Run anyway**. This happens because Moa is a free open-source app without a paid code-signing certificate.
 3. Choose the installer language and the folder, then click **Install** and **Finish**.
-4. Moa starts **in the tray**, the area near the clock. The icon may be hidden behind the **^** arrow. Moa has no window of its own, just like Discord's overlay. **Settings → Connection** opens automatically the first time.
+4. The Moa window opens, and an icon appears **in the tray** near the clock (it may be hidden behind the **^** arrow).
 
-## 3. Connect your browser
+## 3. Play music
 
-Moa plays music in **your usual browser**, so you sign in to Google there as usual. The small **Moa Connector** extension links that tab to Moa.
+<div align="center"><img src="media/app-idle-en.png" width="300" alt="Moa home screen"></div>
 
-<div align="center"><img src="media/settings-connect-en.png" width="420" alt="Settings → Connection"></div>
+1. On Moa's home screen, click a service, for example **YouTube Music** or **Spotify**. It opens in your usual browser.
+2. Sign in there as usual and play any song. A desktop app (Spotify, Yandex Music…) works just as well.
+3. The home screen shows the track, and the overlay appears in the top-left corner. 🎉
 
-1. In **Settings → Connection**, click **Open folder**. A folder named `extension` opens. You need this folder in step 4.
-2. In the browser, open the extensions page by typing it into the address bar:
-   - Chrome, Yandex, Opera, Brave: `chrome://extensions`
-   - Edge: `edge://extensions`
-3. Turn on **Developer mode**. The switch is in the top-right corner in Chrome, or on the left in Edge.
-4. Click **Load unpacked** and select the `extension` folder from step 1.
-5. **Moa Connector** appears in the list. Pin it with the 🧩 icon if you'd like to see its status.
-6. Open [music.youtube.com](https://music.youtube.com), sign in and play any song.
-
-The status in **Settings → Connection** turns green (**Extension connected**), and the overlay appears in the top-left corner. 🎉
-
-> If the YouTube Music tab was already open before you installed the extension, reload it with <kbd>F5</kbd>.
-> Chrome may sometimes remind you that developer-mode extensions are enabled. That's normal. Choose to keep the extension.
-
-### Firefox, Zen, LibreWolf, Floorp
-
-These browsers need Firefox 128 or newer and install the extension differently.
-
-**Quick way (until the browser restarts).**
-1. Type `about:debugging#/runtime/this-firefox` into the address bar.
-2. Click **Load Temporary Add-on…**.
-3. Open the `extension` folder from step 1 and select **`manifest.json`**.
-
-Firefox removes temporary add-ons when it closes, so you repeat these steps after each restart.
-
-**Permanent way.**
-1. Download **`Moa-Connector-firefox.xpi`** from the [latest release](https://github.com/godes2020/maol/releases/latest).
-2. Open `about:config`, accept the warning, find `xpinstall.signatures.required` and set it to **false**.
-3. Open `about:addons`, click the ⚙ gear and choose **Install Add-on From File…**, then select the `.xpi`.
-
-Zen, LibreWolf, Floorp, Firefox Developer Edition and Nightly allow this. Regular Firefox ignores the setting and says the add-on *could not be verified*, so use the quick way there.
-
-**After installing either way:** in `about:addons` open **Moa Connector → Permissions** and turn on **Access your data for music.youtube.com**. Firefox doesn't grant it on its own, and without it the extension can't see the tab. Then reload the YouTube Music tab.
+No extensions, no logins in Moa: Moa follows whatever plays in the Windows media flyout.
 
 ## 4. Set it up for games
 
-- **Mouse:** by default the overlay is **locked**. Clicks go straight through it into the game, so it never gets in the way. To press its buttons, enter move mode with <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd>. If you'd rather have it open when you point at it, choose *Opens on hover* in **Settings → Overlay**, or toggle with <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>U</kbd>.
-- **Position:** press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd>, drag the overlay, and press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> again.
-- **Fullscreen:** set the game to **Borderless window** or **Windowed / Desktop-friendly fullscreen**. In Dota 2: *Settings → Video → Display Mode*. In exclusive fullscreen the overlay can't be drawn, but hotkeys still work.
-- **Style:** pick *Card* or *Cover only* in **Settings → Overlay**.
-
 <div align="center"><img src="media/overlay-edit.png" width="320" alt="Move mode"></div>
 
-## Built-in window (optional)
+- **Position and size:** press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd>. Drag the overlay, and drag its corner to resize it. ⇄ mirrors the card, the second button switches the style, ✓ finishes. On the right half of the screen, the cover moves to the screen edge automatically.
+- **Mouse:** by default the overlay is **locked**, so clicks go straight through it into the game. If you'd rather have it open when you point at it, choose *On hover* on the **Overlay** tab, or toggle with <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>U</kbd>.
+- **Fullscreen:** set the game to **Borderless window** or **Windowed / Desktop-friendly fullscreen**. In Dota 2: *Settings → Video → Display Mode*. In exclusive fullscreen the overlay can't be drawn, but hotkeys still work.
+- **Memory:** to save another 60–100 MB, turn off **Settings → Hardware acceleration** and restart Moa.
 
-If you don't want to use a browser, switch **Settings → Connection → Music source** to **Built-in window**. Moa then plays YouTube Music itself. However, **Google does not allow signing in** inside app windows, so you can only listen without an account in this mode. The window is hidden by default; open it from the tray, or turn on **Settings → General → Show the Moa window**.
+## Optional: browser extension
+
+You only need this if you choose **Settings → Music source → Browser extension**. This mode reads a YouTube Music tab directly instead of the Windows media controls.
+
+**Chrome, Edge, Yandex Browser, Opera, Brave**
+1. On **Settings**, click the folder button next to **Extension folder**.
+2. In the browser, open `chrome://extensions` (or `edge://extensions` in Edge) and turn on **Developer mode**.
+3. Click **Load unpacked** and select that folder.
+4. Open [music.youtube.com](https://music.youtube.com). If it was already open, reload it with <kbd>F5</kbd>.
+
+**Firefox, Zen, LibreWolf, Floorp** (version 128 or newer)
+- *Quick way, until the browser restarts:* open `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…** and select `manifest.json` in the extension folder.
+- *Permanent way:* download `Moa-Connector-firefox.xpi` from the release. Then open `about:config` and set `xpinstall.signatures.required` to **false**. Finally, open `about:addons`, click ⚙ → **Install Add-on From File…** and select the `.xpi`. This works in Zen, LibreWolf, Floorp, Developer Edition and Nightly; regular Firefox only allows the quick way.
+- After installing either way, go to `about:addons` → **Moa Connector → Permissions** and allow **music.youtube.com**.
+
+## Built-in window
+
+**Settings → Music source → Built-in window** plays YouTube Music inside Moa. Google does not allow signing in there, so you can only listen without an account. This mode uses the most memory (about 450–700 MB).
 
 ## Updating
 
-Download the new `Moa-Setup-x.y.z.exe` and run it. It installs over the old version and keeps your settings. Then go to `chrome://extensions` and click the **↻ reload** button on **Moa Connector**. The extension folder is updated together with Moa.
+Download the new `Moa-Setup-x.y.z.exe` and run it. It installs over the old version and keeps your settings.
 
 > To get notified about new versions, click **Watch → Custom → Releases** at the top of the repository page.
 
 ## Uninstalling
 
 1. **Settings → Apps → Installed apps → Moa → Uninstall.**
-2. In `chrome://extensions`, remove **Moa Connector**.
-3. Optionally, delete `%APPDATA%\Moa`, which holds the settings.
+2. Optionally, delete `%APPDATA%\Moa`, which holds the settings.
+3. If you installed the extension, remove **Moa Connector** from your browser.
 
 ## Troubleshooting
 
 | Problem | Fix |
 |---|---|
-| The overlay says “Nothing playing” | Moa must be running (tray), the extension enabled, and a music.youtube.com tab open. Reload the tab with <kbd>F5</kbd>. The extension's popup shows what's missing. |
-| Status says “Extension is not connected” | Make sure **Moa Connector** is enabled in `chrome://extensions` and click its **↻** button. Restart Moa. |
-| “Moa could not start its local connection: port 47823 is busy” | Another copy of Moa or another program is using the port. Quit Moa from the tray, then start it again, or restart your PC. |
-| The overlay is invisible in a game | Switch the game to *Borderless* mode, and check the overlay is on with <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>. If it went off-screen, use **Settings → Overlay → Reset position**. |
-| A hotkey does nothing | Another program uses it. It's highlighted orange in **Settings → Hotkeys**, so pick a different one. |
+| “Nothing playing” | Check that the music appears in the Windows media flyout (press a volume key). Some players appear only after you press play. The line at the bottom of Moa's home screen shows whether Moa sees the media controls. |
+| “Windows media unavailable” | Moa needs Windows 10 version 1809 or newer. Make sure `MoaMedia.exe` is in the Moa folder and that your antivirus did not quarantine it. |
+| Volume hotkeys do nothing | Moa changes the player's slider in the Windows volume mixer. This works for players that output sound themselves (browsers, Spotify…). Check the mixer: the player's slider should move. |
+| Repeat says it's not supported | That player doesn't let other apps control repeat. Use the button in the player itself. |
+| The glow reacts to game sounds | The glow listens to everything Windows plays. Lower **Glow strength** or turn the glow off on the **Overlay** tab. |
+| The overlay is invisible in a game | Switch the game to *Borderless* mode, and check the overlay is on with <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>. If it went off-screen, use **Overlay → Reset**. |
+| A hotkey does nothing | Another program uses it. It's highlighted orange on the **Keys** tab, so pick a different one. |
 | Antivirus warns about the file | That's a false positive for unsigned apps. Download only from this repository's Releases page. |
 
-Still stuck? [Open an issue](https://github.com/godes2020/maol/issues/new) and describe what happened, including your Windows, browser and Moa versions.
+Still stuck? [Open an issue](https://github.com/godes2020/maol/issues/new) and describe what happened, including your Windows version, player and Moa version.

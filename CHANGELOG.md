@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0
+
+- **Any player, no extension.** The new default source reads the Windows media controls through a tiny helper (`MoaMedia.exe`), so YouTube Music, Spotify, Yandex Music, SoundCloud, Apple Music, Deezer, VK, TIDAL and others work in any browser or app. You sign in on the service itself. Volume hotkeys change the player's slider in the Windows mixer.
+- **One Moa window** with a new design: now playing with seek and volume, quick toggles, overlay settings, hotkeys and settings. It has its own title bar, a bottom tab bar, custom sliders, switches and scrollbars, icons, and one-click links to the music services.
+- **Overlay:** resize it by dragging the corner in move mode. The card mirrors itself on the right half of the screen (or set the side manually), unfolds upwards near the bottom, and a move-mode toolbar can mirror it, switch the style or finish.
+- **Cover style:** on hover, controls appear on top of the dimmed cover instead of unfolding a card.
+- **Less memory:** beat analysis moved into the helper (WASAPI loopback), the Moa window is unloaded when closed, only the active source runs, blur filters were replaced with cheaper effects, the animation idles when still, and hardware acceleration can be turned off.
+- The browser extension and the built-in window remain as optional sources.
+
 ## 0.2.1
 
 - **Firefox and Zen support.** Moa Connector now also works in Firefox 128+ and Firefox-based browsers (Zen, LibreWolf, Floorp). The release includes `Moa-Connector-firefox.xpi`, and the install guide has the steps.

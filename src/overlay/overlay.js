@@ -93,6 +93,21 @@
     }
   }
 
+  // A 24 px, saturated copy of the cover for the background: stretched to
+  // the card it looks blurred without a blur filter.
+  function tinyCopy(img) {
+    try {
+      const c = document.createElement('canvas');
+      c.width = c.height = 24;
+      const g = c.getContext('2d');
+      g.filter = 'saturate(1.5)';
+      g.drawImage(img, 0, 0, 24, 24);
+      return c.toDataURL();
+    } catch {
+      return null;
+    }
+  }
+
   function setArt(src) {
     if (!src) {
       els.art.classList.remove('loaded');
@@ -106,7 +121,7 @@
     img.onload = () => {
       els.art.src = src;
       els.art.classList.add('loaded');
-      els.bgArt.style.backgroundImage = `url("${src}")`;
+      els.bgArt.style.backgroundImage = `url("${tinyCopy(img) || src}")`;
       const colors = extractColors(img);
       if (colors) {
         root.setProperty('--c1', colors.c1);

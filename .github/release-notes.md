@@ -6,30 +6,29 @@
 
 | File / Файл | |
 |---|---|
-| **`Moa-Setup-*.exe`** | Installer, includes the browser extension (recommended) · Установщик, расширение уже внутри (рекомендуется) |
+| **`Moa-Setup-*.exe`** | Installer (recommended) · Установщик (рекомендуется) |
 | **`Moa-*-portable.exe`** | Portable, no installation · Без установки |
-| **`Moa-Connector-extension.zip`** | Browser extension on its own, for the portable version · Расширение отдельно, для portable-версии |
-| **`Moa-Connector-firefox.xpi`** | Extension for Firefox / Zen · Расширение для Firefox / Zen ([guide](https://github.com/godes2020/maol/blob/HEAD/docs/INSTALL.md#firefox-zen-librewolf-floorp) · [гайд](https://github.com/godes2020/maol/blob/HEAD/docs/INSTALL.ru.md#firefox-zen-librewolf-floorp)) |
+| `Moa-Connector-extension.zip`, `Moa-Connector-firefox.xpi` | Optional browser extension, not needed by default · Необязательное расширение, по умолчанию не нужно |
 
-> Windows may say *“Windows protected your PC”* — click **More info → Run anyway** (the app isn't code-signed yet).<br>
-> Windows может показать *«Система Windows защитила ваш компьютер»* — нажми **Подробнее → Выполнить в любом случае** (у приложения пока нет подписи).
+> Windows may say *“Windows protected your PC”*. Click **More info → Run anyway** (the app isn't code-signed yet).<br>
+> Windows может показать *«Система Windows защитила ваш компьютер»*. Нажми **Подробнее → Выполнить в любом случае** (у приложения пока нет подписи).
 
-### 🚀 Setup in 1 minute / Настройка за минуту
+### 🚀 Setup / Настройка
 
-1. Install and run Moa. It starts in the tray and opens **Settings → Connection**. · Установи и запусти Moa: она появится в трее и откроет **Настройки → Подключение**.
-2. **Open folder** → in the browser go to `chrome://extensions` → **Developer mode** → **Load unpacked** → select the folder. · **Открыть папку** → в браузере `chrome://extensions` → **Режим разработчика** → **Загрузить распакованное** → выбери папку.
-3. Open [music.youtube.com](https://music.youtube.com), sign in, press play. · Открой [music.youtube.com](https://music.youtube.com), войди, включи музыку.
+1. Install and run Moa. · Установи и запусти Moa.
+2. Play music anywhere: YouTube Music, Spotify, Yandex Music, SoundCloud… in a browser or an app. The home screen opens each service in one click. · Включи музыку где угодно: YouTube Music, Spotify, Яндекс Музыка, SoundCloud… в браузере или приложении. Главный экран открывает каждый сервис в один клик.
+3. That's it: no extensions, no sign-in in Moa. · Всё: без расширений и без входа в Moa.
 
 📖 [Install guide](https://github.com/godes2020/maol/blob/HEAD/docs/INSTALL.md) · [Гайд по установке](https://github.com/godes2020/maol/blob/HEAD/docs/INSTALL.ru.md)
 
 ## ✨ Highlights / Главное
 
-- 🎵 Google sign-in works: music plays in your own browser · Вход в Google работает: музыка играет в твоём браузере
-- 🖱 Locked overlay by default: clicks pass through, safe for Dota 2 / CS2 · Оверлей по умолчанию закреплён: клики проходят насквозь, не мешает в Dota 2 / CS2
-- 💿 Two styles: card or cover only · Два вида: карточка или только обложка
-- 🌈 Smooth glow that breathes with the beat · Плавная подсветка, которая дышит под бит
-- 🪟 No extra window, just the overlay and a tray icon · Без лишнего окна: только оверлей и иконка в трее
-- ⚙ Every setting explained (EN/RU) · Пояснения ко всем настройкам (RU/EN)
+- 🎵 Any player through the Windows media controls · Любой плеер через медиа-управление Windows
+- 🏠 One Moa window: now playing, overlay, hotkeys, settings · Одно окно Moa: сейчас играет, оверлей, бинды, настройки
+- ↔️ Resize by the corner, auto-mirror on the right side, unfolds upwards at the bottom · Размер за уголок, авто-зеркало справа, раскрытие вверх внизу экрана
+- 💿 Cover style: controls on top of the cover on hover · Вид «Обложка»: кнопки поверх обложки при наведении
+- 🪶 ~200 MB of RAM with the overlay · ~200 МБ памяти с оверлеем
+- 🖱 Locked by default: clicks pass through into Dota 2 / CS2 · По умолчанию закреплён: клики проходят в Dota 2 / CS2
 
 ## ⌨ Default hotkeys / Бинды по умолчанию
 
@@ -44,7 +43,7 @@
 | Show / hide overlay · Показать / скрыть оверлей | `Alt+Shift+O` |
 | **Move overlay · Переместить оверлей** | **`Alt+Shift+M`** |
 | **Lock / unlock · Закрепить / открепить** | **`Alt+Shift+U`** |
-| Show player tab · Показать вкладку плеера | `Alt+Shift+Y` |
+| Open Moa · Открыть Moa | `Alt+Shift+Y` |
 
 > The overlay is visible over games in **Borderless / Windowed fullscreen** mode. Hotkeys work in any mode.<br>
-> Оверлей виден поверх игр в режиме **«Окно без рамки» / «Полноэкранный для рабочего стола»**. Бинды работают в любом режиме.
+> Оверлей виден поверх игр в режиме **«Окно без рамки» / «Полноэкранный оконный»**. Бинды работают в любом режиме.
