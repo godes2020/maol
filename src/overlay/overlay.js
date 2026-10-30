@@ -132,7 +132,6 @@
       b.classList.add(`r-${r}`);
     });
     renderProgress();
-    updateLoopback();
   }
 
   function currentTime() {
@@ -149,93 +148,6 @@
     root.setProperty('--progress', p.toFixed(4));
     els.cur.textContent = fmt(cur);
     els.rem.textContent = `-${fmt(dur - cur)}`;
-  }
-
-  // ---------------- Listening to the sound output ----------------
-  // With the system source there is no page to analyse, so the overlay
-  // listens to what Windows plays (loopback) while music is playing, and
-  // releases it a few seconds after the music stops.
-  const loop = { ctx: null, stream: null, analyser: null, freq: null, timer: 0, stopTimer: 0, starting: false, bassAvg: 0, lastBeat: 0, gaps: [] };
-
-  async function startLoopback() {
-    if (loop.ctx || loop.starting || !navigator.mediaDevices) return;
-    loop.starting = true;
-    try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
-      stream.getVideoTracks().forEach((tr) => {
-        tr.stop();
-        stream.removeTrack(tr);
-      });
-      if (!stream.getAudioTracks().length || !(cfg.loopback && state && state.playing)) {
-        stream.getTracks().forEach((tr) => tr.stop());
-        return;
-      }
-      const ctx = new AudioContext();
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 1024;
-      analyser.smoothingTimeConstant = 0.6;
-      ctx.createMediaStreamSource(stream).connect(analyser);
-      Object.assign(loop, { ctx, stream, analyser, freq: new Uint8Array(analyser.frequencyBinCount) });
-      loop.timer = setInterval(analyseLoopback, 33);
-    } catch {
-      // No loopback device: the glow simply follows nothing.
-    } finally {
-      loop.starting = false;
-    }
-  }
-
-  function stopLoopback() {
-    clearInterval(loop.timer);
-    if (loop.stream) loop.stream.getTracks().forEach((tr) => tr.stop());
-    if (loop.ctx) loop.ctx.close().catch(() => {});
-    Object.assign(loop, { ctx: null, stream: null, analyser: null, freq: null, timer: 0, gaps: [] });
-    applyAudio({ energy: 0, bass: 0, bands: [0, 0, 0, 0, 0] });
-  }
-
-  function updateLoopback() {
-    const want = cfg.loopback && state && state.playing;
-    if (want) {
-      clearTimeout(loop.stopTimer);
-      loop.stopTimer = 0;
-      startLoopback();
-    } else if ((loop.ctx || loop.starting) && !loop.stopTimer) {
-      loop.stopTimer = setTimeout(() => {
-        loop.stopTimer = 0;
-        stopLoopback();
-      }, cfg.loopback ? 4000 : 0);
-    }
-  }
-
-  function analyseLoopback() {
-    const { analyser, freq, ctx } = loop;
-    if (!analyser) return;
-    analyser.getByteFrequencyData(freq);
-    const binHz = ctx.sampleRate / analyser.fftSize;
-    const bin = (hz) => Math.max(1, Math.round(hz / binHz));
-    const avg = (from, to) => {
-      let sum = 0;
-      for (let i = from; i < to; i++) sum += freq[i];
-      return sum / ((to - from) * 255);
-    };
-    const bass = avg(bin(40), bin(160));
-    const energy = avg(bin(40), bin(8000));
-    const edges = [40, 160, 500, 1500, 4000, 10000];
-    const bands = [];
-    for (let i = 0; i < edges.length - 1; i++) bands.push(avg(bin(edges[i]), bin(edges[i + 1])));
-    const now = performance.now();
-    let beat = false;
-    if (bass > loop.bassAvg * 1.25 && bass > 0.3 && now - loop.lastBeat > 280) {
-      beat = true;
-      if (loop.lastBeat && now - loop.lastBeat < 1500) {
-        loop.gaps.push(now - loop.lastBeat);
-        if (loop.gaps.length > 12) loop.gaps.shift();
-      }
-      loop.lastBeat = now;
-    }
-    loop.bassAvg = loop.bassAvg * 0.92 + bass * 0.08;
-    const sorted = [...loop.gaps].sort((a, b) => a - b);
-    const bpm = sorted.length >= 4 ? Math.round(60000 / sorted[sorted.length >> 1]) : 0;
-    applyAudio({ energy, bass, beat, bands, bpm });
   }
 
   // ---------------- Audio reactivity ----------------
@@ -309,7 +221,6 @@
     document.body.classList.toggle('layout-cover', cfg.layout === 'cover');
     card.classList.toggle('static', !cfg.reactive);
     setExpanded();
-    updateLoopback();
   }
 
   function applyLayout(l) {

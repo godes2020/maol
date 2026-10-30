@@ -14,7 +14,7 @@ namespace MoaMedia
     // that shows up in the Windows media flyout works: browsers (YouTube Music,
     // SoundCloud, Yandex Music on the web...), Spotify, the Yandex Music app...
     //
-    // stdout: one JSON object per line (hello, state, art, result, error).
+    // stdout: one JSON object per line (hello, state, art, audio, result, error).
     // stdin:  one command per line: "<id>\t<name>\t<arg>". EOF quits.
     internal static class Program
     {
@@ -229,6 +229,7 @@ namespace MoaMedia
             switch (name)
             {
                 case "ping": return "true";
+                case "audio": Audio.Enable(num > 0); return "true";
                 case "volumeBy": return Volume.Change(app, num / 100, null);
                 case "setVolume": return Volume.Change(app, null, num / 100);
                 case "toggleMute": return Volume.ToggleMute(app);
@@ -282,7 +283,7 @@ namespace MoaMedia
         // ------------------------------------------------------------------
         // JSON helpers
 
-        static void Emit(string line)
+        internal static void Emit(string line)
         {
             lock (Out) Out.WriteLine(line);
         }

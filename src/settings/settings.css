@@ -196,6 +196,8 @@ body.paused .np-glow, body.idle .np-glow { animation-play-state: paused; opacity
 .np-empty svg { width: 64px; height: 64px; fill: rgba(255, 255, 255, .9); animation: pixel 2.4s ease-in-out infinite; }
 @keyframes pixel { 50% { transform: scale(1.08); opacity: .8; } }
 .np-cover img.loaded + .np-empty { display: none; }
+body.idle .np-cover img { opacity: 0; }
+body.idle .np-cover img + .np-empty { display: grid; }
 
 .np-meta { width: 100%; text-align: center; margin-bottom: 12px; }
 body.idle .np-meta { display: none; }

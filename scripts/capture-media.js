@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const { execFileSync } = require('child_process');
-const { chromium } = require('playwright');
+const { chromium, _electron } = require('playwright');
 
 const ROOT = path.join(__dirname, '..');
 const MEDIA = path.join(ROOT, 'docs', 'media');
@@ -83,18 +83,6 @@ function markOnlySvg() {
 
 // ---------------------------------------------------------------------------
 // Static server so the overlay page can read its cover art into a canvas.
-
-// Default config straight from the app, without starting Electron.
-function loadDefaults() {
-  const Module = require('module');
-  const orig = Module._load;
-  Module._load = (req, ...rest) => (req === 'electron' ? { app: { getPath: () => '' } } : orig(req, ...rest));
-  try {
-    return require('../src/main/config');
-  } finally {
-    Module._load = orig;
-  }
-}
 
 function serve() {
   const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml' };
@@ -189,59 +177,47 @@ async function main() {
   // ---- Overlay screenshots ----
   const server = await serve();
   const base = `http://127.0.0.1:${server.address().port}/src/overlay/overlay.html`;
+  // Window sizes match OVERLAY_BOX in src/main/main.js plus the glow padding.
+  const CARD = { width: 336, height: 204 };
+  const COVER = { width: 132, height: 164 };
   const shots = [
-    { name: 'overlay-compact', q: 'lang=en' },
-    { name: 'overlay-expanded', q: 'lang=en&expanded' },
-    { name: 'overlay-muted', q: 'lang=en&muted' },
-    { name: 'overlay-edit', q: 'lang=en&edit' },
-    { name: 'overlay-cover', q: 'lang=en&layout=cover' },
-    { name: 'overlay-ru', q: 'lang=ru&expanded&title=Полуночная аркада&artist=Неоновые пиксели&repeat=ONE' }
+    { name: 'overlay-compact', q: 'lang=en', vp: CARD, clip: 120 },
+    { name: 'overlay-expanded', q: 'lang=en&expanded', vp: CARD, clip: 176 },
+    { name: 'overlay-mirrored', q: 'lang=en&side=right', vp: CARD, clip: 120 },
+    { name: 'overlay-muted', q: 'lang=en&muted', vp: CARD, clip: 120 },
+    { name: 'overlay-edit', q: 'lang=en&edit', vp: CARD },
+    { name: 'overlay-cover', q: 'lang=en&layout=cover', vp: COVER, clip: 136 },
+    { name: 'overlay-cover-hover', q: 'lang=en&layout=cover&hot', vp: COVER, clip: 136 },
+    { name: 'overlay-cover-edit', q: 'lang=en&layout=cover&edit', vp: COVER },
+    { name: 'overlay-ru', q: 'lang=ru&expanded&title=Полуночная аркада&artist=Неоновые пиксели&repeat=ONE', vp: CARD, clip: 176 }
   ];
-  const ov = await browser.newPage({ viewport: { width: 336, height: 176 }, deviceScaleFactor: 2 });
   for (const s of shots) {
+    const ov = await browser.newPage({ viewport: s.vp, deviceScaleFactor: 2 });
     await ov.goto(`${base}?${s.q}`);
     await ov.waitForTimeout(900);
-    await ov.screenshot({ path: path.join(MEDIA, `${s.name}.png`), omitBackground: true });
+    const clip = s.clip ? { x: 0, y: 0, width: s.vp.width, height: s.clip } : undefined;
+    await ov.screenshot({ path: path.join(MEDIA, `${s.name}.png`), omitBackground: true, clip });
+    await ov.close();
   }
-  await ov.close();
 
   // ---- Hero: overlay above a game-like scene ----
   const hero = await browser.newPage({ viewport: { width: 1200, height: 600 }, deviceScaleFactor: 1 });
   await hero.goto(`${base}?lang=en&expanded`);
-  await hero.addStyleTag({ content: SCENE_CSS + '.card{top:36px;left:36px;transform:scale(1.5);transform-origin:top left}' });
+  await hero.addStyleTag({ content: SCENE_CSS + '.box{inset:36px auto auto 36px;width:300px;height:168px;transform:scale(1.5);transform-origin:top left}' });
   await hero.waitForTimeout(900);
   await hero.screenshot({ path: path.join(MEDIA, 'hero.png') });
   await hero.close();
 
-  // ---- Settings window ----
-  const { DEFAULTS } = loadDefaults();
-  for (const lang of ['en', 'ru']) {
-    for (const tab of ['connect', 'overlay']) {
-      const settings = await browser.newPage({ viewport: { width: 560, height: tab === 'overlay' ? 1180 : 720 }, deviceScaleFactor: 1 });
-      await settings.addInitScript(([cfg, l]) => {
-        const info = {
-          connector: { connected: true, version: '0.2.0', error: null },
-          extensionDir: 'C:\\Users\\you\\AppData\\Local\\Programs\\Moa\\resources\\extension',
-          config: cfg, defaults: cfg.hotkeys, failed: [], version: '0.2.0', lang: l
-        };
-        window.moa = new Proxy({ getInfo: async () => info, patch: async () => info, resetHotkeys: async () => info, onInfo() {} }, {
-          get: (t, k) => t[k] || (() => {})
-        });
-      }, [DEFAULTS, lang]);
-      await settings.goto(`http://127.0.0.1:${server.address().port}/src/settings/settings.html?tab=${tab}`);
-      await settings.waitForTimeout(400);
-      await settings.screenshot({ path: path.join(MEDIA, `settings-${tab}-${lang}.png`) });
-      await settings.close();
-    }
-  }
+  // ---- The Moa window, running for real with a stand-in media helper ----
+  await captureApp();
 
   // ---- GIFs. A fake clock makes every frame exactly 40 ms apart, so the
   // animation in the GIF runs at its real, smooth speed. ----
-  async function recordGif(name, query, timeline, totalFrames) {
+  async function recordGif(name, query, timeline, totalFrames, vp = { width: 336, height: 176 }, width = 420) {
     const frames = path.join(MEDIA, '.frames');
     fs.rmSync(frames, { recursive: true, force: true });
     fs.mkdirSync(frames);
-    const gp = await browser.newPage({ viewport: { width: 336, height: 176 }, deviceScaleFactor: 2 });
+    const gp = await browser.newPage({ viewport: vp, deviceScaleFactor: 2 });
     await gp.clock.install();
     await gp.goto(`${base}?${query}`);
     await gp.addStyleTag({ content: 'html{background:#16121f}' });
@@ -255,7 +231,7 @@ async function main() {
     await gp.close();
     // No dithering: dithered gradients shimmer from frame to frame.
     execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', '25', '-i', path.join(frames, 'f%04d.png'),
-      '-vf', 'scale=420:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=160:stats_mode=full[p];[b][p]paletteuse=dither=none',
+      '-vf', `scale=${width}:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=160:stats_mode=full[p];[b][p]paletteuse=dither=none`,
       path.join(MEDIA, `${name}.gif`)]);
     fs.rmSync(frames, { recursive: true, force: true });
   }
@@ -271,11 +247,45 @@ async function main() {
   await recordGif('overlay-cover-demo', 'lang=en&time=60&layout=cover', {
     60: () => window.demo.setHover(true),
     120: () => window.demo.setHover(false)
-  }, 170);
+  }, 170, { width: 132, height: 136 }, 200);
 
   await browser.close();
   server.close();
   console.log('media written to', MEDIA);
+}
+
+async function captureApp() {
+  const shots = [
+    { lang: 'en', idle: false, tabs: ['home', 'overlay', 'settings'] },
+    { lang: 'ru', idle: false, tabs: ['home', 'overlay', 'settings'] },
+    { lang: 'en', idle: true, tabs: ['home'] },
+    { lang: 'ru', idle: true, tabs: ['home'] }
+  ];
+  for (const shot of shots) {
+    const userData = fs.mkdtempSync(path.join(require('os').tmpdir(), 'moa-media-'));
+    fs.writeFileSync(path.join(userData, 'config.json'), JSON.stringify({ general: { language: shot.lang, onboarded: true } }));
+    const app = await _electron.launch({
+      executablePath: require('electron'),
+      args: [ROOT, '--no-sandbox', `--user-data-dir=${userData}`],
+      env: { ...process.env, MOA_MEDIA_HELPER: path.join(__dirname, 'fake-media-helper.js'), FAKE_IDLE: shot.idle ? '1' : '' }
+    });
+    const overlay = await app.firstWindow();
+    await overlay.evaluate(() => window.moa.command('showApp'));
+    let win = null;
+    for (let i = 0; i < 50 && !win; i++) {
+      win = app.windows().find((w) => w.url().includes('settings.html'));
+      if (!win) await new Promise((r) => setTimeout(r, 100));
+    }
+    await win.waitForTimeout(1500);
+    for (const tab of shot.tabs) {
+      await win.click(`#tabs button[data-tab="${tab}"]`);
+      await win.waitForTimeout(500);
+      const name = shot.idle ? `app-idle-${shot.lang}` : `app-${tab}-${shot.lang}`;
+      await win.screenshot({ path: path.join(MEDIA, `${name}.png`) });
+    }
+    await app.close();
+    fs.rmSync(userData, { recursive: true, force: true });
+  }
 }
 
 main().catch((err) => {

@@ -21,7 +21,7 @@ class SystemMedia extends EventEmitter {
   }
 
   get available() {
-    return process.platform === 'win32' && fs.existsSync(this.exe);
+    return (process.platform === 'win32' || process.env.MOA_MEDIA_HELPER) && fs.existsSync(this.exe);
   }
 
   start() {
@@ -37,7 +37,14 @@ class SystemMedia extends EventEmitter {
 
   spawn() {
     this.error = null;
-    const proc = spawn(this.exe, [], { windowsHide: true, stdio: ['pipe', 'pipe', 'ignore'] });
+    // MOA_MEDIA_HELPER lets tests swap in a stand-in helper script.
+    const cmd = process.env.MOA_MEDIA_HELPER ? process.execPath : this.exe;
+    const args = process.env.MOA_MEDIA_HELPER ? [this.exe] : [];
+    const proc = spawn(cmd, args, {
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+      windowsHide: true,
+      stdio: ['pipe', 'pipe', 'ignore']
+    });
     this.proc = proc;
     readline.createInterface({ input: proc.stdout }).on('line', (line) => this.onLine(line));
     proc.on('error', (err) => {
@@ -69,9 +76,12 @@ class SystemMedia extends EventEmitter {
     if (msg.type === 'hello') {
       this.ready = true;
       this.restarts = 0;
+      this.audioOn = false;
       this.emit('status');
     } else if (msg.type === 'state') {
       this.emit('state', msg);
+    } else if (msg.type === 'audio') {
+      this.emit('audio', msg);
     } else if (msg.type === 'art') {
       this.art.set(msg.key, msg.data);
       // Only the current and the previous cover are ever needed.
@@ -86,6 +96,13 @@ class SystemMedia extends EventEmitter {
       this.error = msg.message;
       this.emit('status');
     }
+  }
+
+  // Beat analysis runs in the helper only while it is needed.
+  setAudio(on) {
+    if (!this.ready || this.audioOn === on) return;
+    this.audioOn = on;
+    this.cmd('audio', on ? 1 : 0);
   }
 
   getArt(key) {

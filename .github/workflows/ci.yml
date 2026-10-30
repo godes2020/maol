@@ -31,3 +31,20 @@ jobs:
           $p = Start-Process build/helper/MoaMedia.exe -ArgumentList '--once' -Wait -PassThru -RedirectStandardOutput helper-out.txt
           Get-Content helper-out.txt
           if (-not (Select-String -Path helper-out.txt -Pattern '"type":"hello"')) { throw 'MoaMedia did not start' }
+          # Commands over stdin, including the beat analysis (no sound card on CI: it must not crash).
+          $psi = New-Object System.Diagnostics.ProcessStartInfo (Resolve-Path build/helper/MoaMedia.exe)
+          $psi.RedirectStandardInput = $true
+          $psi.RedirectStandardOutput = $true
+          $psi.UseShellExecute = $false
+          $proc = [System.Diagnostics.Process]::Start($psi)
+          $proc.StandardInput.WriteLine("1`taudio`t1")
+          $proc.StandardInput.WriteLine("2`tvolumeBy`t0")
+          Start-Sleep -Seconds 3
+          $proc.StandardInput.WriteLine("3`taudio`t0")
+          Start-Sleep -Seconds 1
+          $proc.StandardInput.Close()
+          if (-not $proc.WaitForExit(5000)) { $proc.Kill(); throw 'MoaMedia did not exit when stdin closed' }
+          $out = $proc.StandardOutput.ReadToEnd()
+          $out
+          if ($out -notmatch '"id":"1","value":true') { throw 'audio command failed' }
+          if ($out -notmatch '"id":"3","value":true') { throw 'helper stopped answering' }

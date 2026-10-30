@@ -3,7 +3,6 @@ const fs = require('fs');
 const {
   app,
   BrowserWindow,
-  desktopCapturer,
   Menu,
   Tray,
   globalShortcut,
@@ -11,7 +10,6 @@ const {
   nativeImage,
   net,
   screen,
-  session,
   shell
 } = require('electron');
 const { Config, DEFAULT_HOTKEYS } = require('./config');
@@ -301,9 +299,15 @@ function createOverlayWindow() {
 }
 
 function overlayConfig() {
-  const c = config.get();
-  // With the system source the overlay listens to the sound output itself.
-  return { ...c.overlay, loopback: source() === 'system' && c.overlay.reactive };
+  return config.get().overlay;
+}
+
+// With the system source the helper listens to the sound output for the
+// beat glow, only while music plays and the glow is on.
+function updateAudioCapture() {
+  if (!media) return;
+  const on = source() === 'system' && config.get().overlay.reactive && Boolean(lastState && lastState.playing);
+  media.setAudio(on);
 }
 
 function applyOverlayConfig() {
@@ -618,6 +622,7 @@ function extensionDir() {
 }
 
 function helperExe() {
+  if (process.env.MOA_MEDIA_HELPER) return path.resolve(process.env.MOA_MEDIA_HELPER);
   return app.isPackaged
     ? path.join(process.resourcesPath, 'helper', 'MoaMedia.exe')
     : path.join(ROOT, 'build', 'helper', 'MoaMedia.exe');
@@ -655,7 +660,13 @@ function setupIpc() {
   media.on('state', (state) => {
     if (source() === 'system') handleState(state);
   });
-  media.on('status', pushSettingsInfo);
+  media.on('status', () => {
+    updateAudioCapture();
+    pushSettingsInfo();
+  });
+  media.on('audio', (audio) => {
+    if (source() === 'system') sendOverlay('overlay:audio', audio);
+  });
 
   ipcMain.on('settings:open-ytm', () => shell.openExternal(YTM_URL));
   ipcMain.on('settings:open-extension-folder', () => shell.openPath(extensionDir()));
@@ -703,6 +714,7 @@ function setupIpc() {
     if (partial && partial.hotkeys) registerHotkeys();
     if (partial && partial.overlay) {
       applyOverlayConfig();
+      updateAudioCapture();
       rebuildTrayMenu();
     }
     if (partial && partial.general) {
@@ -740,6 +752,7 @@ async function handleState(state) {
   lastState = state;
   sendOverlay('overlay:state', state);
   sendApp('app:state', state);
+  updateAudioCapture();
   if (Boolean(hadTrack) !== Boolean(state.hasTrack)) updateOverlayVisibility();
   if (state.artwork !== lastArtUrl) {
     lastArtUrl = state.artwork;
@@ -829,17 +842,6 @@ if (!config.get().general.gpu) app.disableHardwareAcceleration();
 app.whenReady().then(() => {
   t = i18n.make(currentLang());
   media = new SystemMedia(helperExe());
-
-  // Beat glow for the system source: the overlay listens to the sound
-  // output (loopback). Only the overlay may ask, and the video part of the
-  // capture is dropped right away.
-  session.defaultSession.setDisplayMediaRequestHandler((req, callback) => {
-    if (!overlayWin || req.frame !== overlayWin.webContents.mainFrame) return callback({});
-    desktopCapturer
-      .getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } })
-      .then((sources) => callback(sources[0] ? { video: sources[0], audio: 'loopback' } : {}))
-      .catch(() => callback({}));
-  });
 
   createAppMenu();
   setupIpc();
