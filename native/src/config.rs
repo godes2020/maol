@@ -85,6 +85,9 @@ pub struct General {
     pub language: String,
     pub autostart: bool,
     pub close_to_tray: bool,
+    /// Own key: Moa 0.3 kept "gpu" on by default, and carrying that over
+    /// would start the native app on the heavier GPU renderer.
+    #[serde(rename = "gpuNative")]
     pub gpu: bool,
 }
 

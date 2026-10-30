@@ -183,8 +183,8 @@ export component Overlay inherits Window {
     in property <float> intensity: 1;
     in property <float> card-opacity: 1;
     in property <string> edit-key: "Alt+Shift+M";
-    // Windows cuts this colour out of the window (CPU drawing has no alpha
-    // there), so soft glows that would bleed into it are left off.
+    // Windows cuts this colour out of the window (its windows get no alpha
+    // from our renderers), so soft glows that would bleed into it are left off.
     in property <bool> keyed;
 
     callback drag();

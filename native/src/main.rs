@@ -41,8 +41,10 @@ fn main() {
             "software"
         };
         let _ = slint::BackendSelector::new().backend_name("winit".into()).renderer_name(renderer.into()).select();
-        platform::set_overlay_keyed(renderer != "skia");
     }
+    // Neither renderer gives the overlay real alpha on Windows, so the
+    // background colour is keyed out instead.
+    platform::set_overlay_keyed(true);
 
     let hidden = std::env::args().any(|a| a == "--hidden");
     let app = app::App::start(hidden);

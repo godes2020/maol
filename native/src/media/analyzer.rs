@@ -66,7 +66,9 @@ impl Analyzer {
         let now = Instant::now();
         let since = self.last_beat.map(|t| now.duration_since(t).as_secs_f32() * 1000.0).unwrap_or(f32::MAX);
         let mut beat = false;
-        if bass > self.bass_avg * 1.25 && bass > 0.3 && since > 280.0 {
+        // A rise over the running average, not a ratio: on loud masters the
+        // level sits near the top of the scale and a ratio never triggers.
+        if bass > self.bass_avg + 0.06 && bass > 0.3 && since > 280.0 {
             beat = true;
             if since < 1500.0 {
                 self.gaps.push(since);

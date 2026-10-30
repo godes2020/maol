@@ -8,17 +8,21 @@ A test build of the new Moa, rewritten in Rust + Slint. It is a single small `.e
 
 | File / Файл | |
 |---|---|
-| **`Moa-0.5.0-preview-x64.exe`** | Portable, no installation: download and run · Без установки: скачай и запусти |
+| **`Moa-Setup-0.5.0-preview-x64.exe`** | **Installer (recommended).** Removes Moa 0.3 and older builds first, adds Start menu and desktop shortcuts · **Установщик (рекомендуется).** Сначала удаляет Moa 0.3 и старые сборки, создаёт ярлыки в «Пуске» и на рабочем столе |
+| `Moa-0.5.0-preview-x64.exe` | Portable, no installation: download and run · Без установки: скачай и запусти |
 
 > Windows may say *“Windows protected your PC”*. Click **More info → Run anyway** (the app isn't code-signed yet).<br>
 > Windows может показать *«Система Windows защитила ваш компьютер»*. Нажми **Подробнее → Выполнить в любом случае** (у приложения пока нет подписи).
 
-Settings carry over from Moa 0.3.1 (`%APPDATA%\Moa`). 0.3.1 can stay installed: close it before starting the preview.
+Settings carry over from Moa 0.3.1 (`%APPDATA%\Moa`). The installer closes Moa, runs the old version's uninstaller and clears its caches; settings and player sign-ins stay. With the portable exe, uninstall 0.3.1 yourself or close it first.
 
-Настройки переносятся из Moa 0.3.1 (`%APPDATA%\Moa`). 0.3.1 можно не удалять: просто закрой её перед запуском тестовой версии.
+Настройки переносятся из Moa 0.3.1 (`%APPDATA%\Moa`). Установщик закрывает Moa, удаляет старую версию её же деинсталлятором и чистит её кэши; настройки и входы в плеере остаются. С портативным exe удали 0.3.1 сам или хотя бы закрой её.
 
 ## Fixed in this build / Исправлено в этой сборке
 
+- An installer that removes the old Moa first · Установщик, который сначала удаляет старую Moa
+- The overlay background is transparent on both renderers (the GPU setting from 0.3 no longer carries over) · Фон оверлея прозрачный при любом способе отрисовки (настройка GPU из 0.3 больше не переносится)
+- The audio animation adapts to the track's loudness, so loud tracks keep moving instead of sitting at maximum · Анимация под звук подстраивается под громкость трека: на громких треках она больше не упирается в максимум
 - The overlay no longer has a black background and stays a floating layer, not a separate window · У оверлея больше нет чёрного фона, и он остаётся плавающим слоем, а не отдельным окном
 - The beat animation works with the built-in player too · Анимация под бит работает и со встроенным плеером
 - The home logo and its animation are drawn on whole pixels; icon buttons are centred · Логотип на главной и его анимация рисуются по целым пикселям; иконки в кнопках по центру

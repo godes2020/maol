@@ -893,7 +893,7 @@ export component AppWindow inherits Window {
                             icon: @image-url("icons/cpu.svg");
                             title: I18n.tr("gen.gpu");
                             desc: I18n.tr("gen.gpu.desc");
-                            Switch { y: (parent.height - self.height) / 2; checked: root.cfg.gpu; toggled(v) => { root.set-bool("general.gpu", v); } }
+                            Switch { y: (parent.height - self.height) / 2; checked: root.cfg.gpu; toggled(v) => { root.set-bool("general.gpuNative", v); } }
                         }
                         ListRow {
                             icon: @image-url("icons/copy.svg");

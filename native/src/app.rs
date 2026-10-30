@@ -38,6 +38,39 @@ fn box_size(cover: bool) -> (f32, f32) {
     }
 }
 
+/// Auto-gain for the audio levels: each value is measured against the
+/// recent quietest and loudest it has been, so loud masters still move.
+struct Levels {
+    lo: [f32; 7],
+    hi: [f32; 7],
+    last: Instant,
+}
+
+impl Levels {
+    fn new() -> Self {
+        Self { lo: [1.0; 7], hi: [0.0; 7], last: Instant::now() }
+    }
+
+    /// Order: energy, bass, then the five bands.
+    fn norm(&mut self, raw: [f32; 7]) -> [f32; 7] {
+        let now = Instant::now();
+        let dt = now.duration_since(self.last).as_secs_f32().min(0.5);
+        self.last = now;
+        // The range forgets old extremes over a few seconds.
+        let fade = 1.0 - (-dt / 3.0).exp();
+        let mut out = [0.0; 7];
+        for i in 0..7 {
+            let v = raw[i];
+            self.hi[i] = if v > self.hi[i] { v } else { self.hi[i] + (v - self.hi[i]) * fade };
+            self.lo[i] = if v < self.lo[i] { v } else { self.lo[i] + (v - self.lo[i]) * fade };
+            // A minimum span keeps near-constant noise from filling the scale.
+            let span = (self.hi[i] - self.lo[i]).max(0.08);
+            out[i] = ((v - self.lo[i]) / span).clamp(0.0, 1.0);
+        }
+        out
+    }
+}
+
 #[derive(Default)]
 struct Shown {
     energy: f32,
@@ -78,6 +111,7 @@ pub struct App {
     pending: RefCell<HashMap<u64, Box<dyn FnOnce(Option<serde_json::Value>)>>>,
 
     target: RefCell<AudioFrame>,
+    levels: RefCell<Levels>,
     shown: RefCell<Shown>,
     beat_period: Cell<f32>,
     clock: Cell<f64>,
@@ -130,6 +164,7 @@ impl App {
             art: RefCell::new(None),
             pending: RefCell::new(HashMap::new()),
             target: RefCell::new(AudioFrame::default()),
+            levels: RefCell::new(Levels::new()),
             shown: RefCell::new(Shown::default()),
             beat_period: Cell::new(0.5),
             clock: Cell::new(0.0),
@@ -579,13 +614,13 @@ impl App {
         let ease = |from: f32, to: f32, rate: f32| from + (to - from) * (1.0 - (-rate * dt).exp());
         let te = if playing { tgt.energy } else { 0.0 };
         let tb = if playing { tgt.bass } else { 0.0 };
-        sh.energy = ease(sh.energy, te, if te > sh.energy { 10.0 } else { 3.0 });
+        sh.energy = ease(sh.energy, te, if te > sh.energy { 12.0 } else { 5.0 });
         sh.bass = ease(sh.bass, tb, if tb > sh.bass { 12.0 } else { 4.0 });
         let decay = 2.6 / self.beat_period.get().max(0.25);
         sh.pulse = (sh.bass * 0.5).max(sh.pulse * (-decay * dt).exp());
         for i in 0..5 {
             let t = if playing { tgt.bands.get(i).copied().unwrap_or(0.0) } else { 0.0 };
-            sh.bands[i] = ease(sh.bands[i], t, if t > sh.bands[i] { 18.0 } else { 6.0 });
+            sh.bands[i] = ease(sh.bands[i], t, if t > sh.bands[i] { 20.0 } else { 9.0 });
         }
         let still = !playing && sh.energy < 0.002 && sh.pulse < 0.002 && sh.bands.iter().all(|b| *b < 0.002);
         let (e, p, bands) = (sh.energy, sh.pulse, sh.bands);
@@ -610,11 +645,12 @@ impl App {
     }
 
     fn on_audio(&self, a: AudioFrame) {
-        let intensity = 1.0;
+        let b = |i: usize| a.bands.get(i).copied().unwrap_or(0.0);
+        let n = self.levels.borrow_mut().norm([a.energy, a.bass, b(0), b(1), b(2), b(3), b(4)]);
         let mut t = self.target.borrow_mut();
-        t.energy = (a.energy * 1.6).min(1.0) * intensity;
-        t.bass = ((a.bass - 0.25) * 1.5).clamp(0.0, 1.0);
-        t.bands = a.bands.iter().map(|v| (v * 1.5).min(1.0)).collect();
+        t.energy = n[0];
+        t.bass = n[1];
+        t.bands = n[2..].to_vec();
         if (60.0..=200.0).contains(&a.bpm) {
             self.beat_period.set(60.0 / a.bpm);
         }
@@ -1147,7 +1183,7 @@ impl App {
             "overlay" => self.apply_overlay_config(),
             "playback" => {}
             "general" => match field {
-                "language" | "gpu" => self.restart_note.set(true),
+                "language" | "gpuNative" => self.restart_note.set(true),
                 "autostart" => platform::set_autostart(v.as_bool().unwrap_or(false)),
                 "source" => {
                     if self.source() != "player" {
