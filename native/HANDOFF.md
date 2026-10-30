@@ -7,13 +7,18 @@ Native rewrite of Moa in Rust + Slint 1.18 (`native/`). The Electron 0.3.1 app i
 - On Linux the media source is a demo (`src/media/mock.rs`). The env vars `MOA_DEMO_IDLE=1`, `MOA_DEMO_COVER=1`, `MOA_TAB=home|overlay|keys|guide|settings` and `MOA_CONFIG=<path>` are for testing.
 - The UI is `ui/*.slint`, the strings are `ui/strings.json` and the in-app guide is `ui/guide.json`.
 
-## Next steps (in order)
-1. **Layout.** Buttons were cramped to the left: the bottom tab bar, the platform tiles on the idle home screen, chips, style tiles and segmented buttons. I added `horizontal-stretch: 1` at the use sites and `viewport-width: self.width` in Page (`ui/controls.slint`), but have not checked the result. Take screenshots of every tab under xvfb and fix what is still wrong.
-2. **Windows compile.** Run `cargo check --target x86_64-pc-windows-msvc --no-default-features` and fix `src/media/system_win.rs`, `src/platform/win.rs`, `src/tray.rs` and `src/keys.rs`.
-3. **CI.** Add a workflow job that builds the native exe on `windows-latest`, then extend release.yml (inputs `publish: "true"`) and publish a 0.5.0 pre-release.
-4. Spotify OAuth PKCE (loopback `http://127.0.0.1:47825/callback`) in `src/spotify.rs`.
-5. A WebView2 player window, loaded on demand, in `src/player.rs`.
-6. README/INSTALL updates, plus a RAM measurement on Windows.
+## Done
+1. Layout: checked every tab under xvfb and fixed it.
+2. Windows compile: the build is clean on `x86_64-pc-windows-msvc`.
+3. CI: the `native` job in ci.yml builds the exe on `windows-latest` and runs `scripts/smoke.ps1`. The release.yml inputs `publish: "true", native: "true"` publish the **v0.5.0 pre-release** with `Moa-0.5.0-preview-x64.exe`.
+4. Spotify OAuth PKCE (`src/spotify.rs`): loopback `http://127.0.0.1:47825/callback`, refresh token only, display name from `/v1/me`.
+5. WebView2 player (`src/player.rs`, `src/player-bridge.js`, `ui/player.slint`): wry 0.57 builds a child webview in a Slint window on first open. The bridge reads Media Session and media elements and runs commands through the site's own media-key handlers.
+6. README/INSTALL now have a "Native preview 0.5.0" section. Idle RAM on Windows (CI smoke test) is **10.6 MB private, 38.3 MB working set**.
+
+## Next steps
+- Wait for user feedback on 0.5.0. The built-in player and Spotify were not tested by hand on Windows: CI only checks that the app starts.
+- Spotify is sign-in only for now. Next: playlists and playback control through the Web API (`user-modify-playback-state` is already in the scopes).
+- Measure RAM with the player open and with music playing on a real machine, and add the numbers to the README memory section.
 
 ## Rules
 - Work on branch `claude/tender-noether-b7vxj4`. Do not open a PR unless asked.
