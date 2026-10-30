@@ -336,6 +336,7 @@ fn paint_glow(g: &mut GlowWin, s: &super::Glow) {
         let reach = (c.x.min(c.y).min(s.win.w - c.x - c.w).min(s.win.h - c.y - c.h)).max(4) as f32;
         let (cx, cy) = (c.x as f32 + c.w as f32 / 2.0, c.y as f32 + c.h as f32 / 2.0 + reach * 0.1);
         let (hx, hy) = (c.w as f32 / 2.0 - r, c.h as f32 / 2.0 - r);
+        let cy0 = c.y as f32 + c.h as f32 / 2.0;
         for y in 0..h {
             for x in 0..w {
                 // Distance from the card's rounded rectangle.
@@ -343,7 +344,12 @@ fn paint_glow(g: &mut GlowWin, s: &super::Glow) {
                 let dy = ((y as f32 + 0.5 - cy).abs() - hy).max(0.0);
                 let d = ((dx * dx + dy * dy).sqrt() - r).max(0.0);
                 let t = (d / reach).min(1.0);
-                let a = 0.85 * (1.0 - t) * (1.0 - t);
+                // Nothing under the card itself: should the glow end up above
+                // the overlay it must not wash the card out.
+                let ex = ((x as f32 + 0.5 - cx).abs() - hx).max(0.0);
+                let ey = ((y as f32 + 0.5 - cy0).abs() - hy).max(0.0);
+                let outside = ((ex * ex + ey * ey).sqrt() - r + 0.5).clamp(0.0, 1.0);
+                let a = 0.85 * (1.0 - t) * (1.0 - t) * outside;
                 let mix = |p: u8, q: u8| p as f32 + (q as f32 - p as f32) * t;
                 let (rr, gg, bb) = (mix(s.c1.0, s.c2.0), mix(s.c1.1, s.c2.1), mix(s.c1.2, s.c2.2));
                 let pa = |v: f32| (v * a).round() as u32;
@@ -400,6 +406,11 @@ pub fn set_glow(glow: Option<super::Glow>) {
             let after = OVERLAY.with(|o| o.get()).map(|h| HWND(h as *mut _)).unwrap_or(HWND_TOPMOST);
             let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER;
             let _ = SetWindowPos(g.hwnd, Some(after), 0, 0, 0, 0, if was_hidden { flags | SWP_SHOWWINDOW } else { flags });
+            // Lift the overlay back over it, in case it had lost its topmost
+            // place and the glow went on top.
+            if after != HWND_TOPMOST {
+                let _ = SetWindowPos(after, Some(HWND_TOPMOST), 0, 0, 0, 0, flags);
+            }
         }
     });
 }
