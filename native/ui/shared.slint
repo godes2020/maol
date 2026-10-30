@@ -1,0 +1,53 @@
+// State shared by the overlay and the Moa window. Each window gets its own
+// copy of these globals; the Rust side keeps them in sync.
+
+export global I18n {
+    pure callback tr(string) -> string;
+}
+
+export global Theme {
+    // Colours picked from the current cover.
+    in property <color> c1: #8b5cf6;
+    in property <color> c2: #ec4899;
+}
+
+export global Track {
+    in property <bool> has-track;
+    in property <bool> playing;
+    in property <string> title;
+    in property <string> artist;
+    in property <string> source-name;
+    in property <image> source-icon;
+    in property <bool> has-art;
+    in property <image> art;
+    // Tiny copy of the cover; stretched with smooth scaling it reads as a blur.
+    in property <image> backdrop;
+    in property <float> progress;
+    in property <float> duration;
+    in property <string> cur-text: "0:00";
+    in property <string> dur-text: "0:00";
+    in property <string> rem-text: "-0:00";
+    in property <bool> can-seek: true;
+    in property <bool> muted;
+    in property <int> volume: -1;
+    in property <string> repeat: "NONE";
+    in property <bool> repeat-supported: true;
+    // Ring progress path in a 56×56 viewbox.
+    in property <string> ring-path;
+    // Smoothed audio, 0..1.
+    in property <float> energy;
+    in property <float> pulse;
+    in property <[float]> bands: [0, 0, 0, 0, 0];
+    in property <string> toast;
+    in property <bool> toasting;
+
+    callback command(string);
+    callback seek-to(float);
+    callback set-volume(float);
+}
+
+// An icon from ui/icons, tinted.
+export component Icon inherits Image {
+    colorize: white;
+    image-rendering: smooth;
+}

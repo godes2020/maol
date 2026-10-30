@@ -1,0 +1,553 @@
+import { I18n, Theme, Track, Icon } from "shared.slint";
+
+// Round button with an icon, used all over the overlay.
+component Btn inherits Rectangle {
+    in property <image> icon;
+    in property <length> size: 30px;
+    in property <length> icon-size: 20px;
+    in property <brush> tint: white;
+    in property <bool> enabled: true;
+    in property <string> tip;
+    callback clicked;
+    width: size;
+    height: size;
+    border-radius: 8px * size / 30px;
+    background: ta.has-hover && enabled ? #ffffff1f : transparent;
+    opacity: enabled ? 1 : 0.35;
+    animate background { duration: 150ms; }
+    Icon {
+        source: icon;
+        width: icon-size;
+        height: icon-size;
+        colorize: tint;
+        opacity: ta.has-hover ? 1 : 0.9;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { if (enabled) { root.clicked(); } }
+    }
+}
+
+// Equalizer bars; the mute toggle.
+component Eq inherits Rectangle {
+    in property <length> u;
+    in property <bool> small;
+    callback clicked;
+    property <length> bar-w: (small ? 2 : 2.5) * u;
+    property <length> max-h: (small ? 10 : 13) * u;
+    property <length> min-h: (small ? 2 : 3) * u;
+    property <bool> live: Track.playing && !Track.muted;
+    width: (small ? 22 : 30) * u;
+    height: self.width;
+    border-radius: 7 * u;
+    background: ta.has-hover ? #ffffff1f : transparent;
+    HorizontalLayout {
+        alignment: center;
+        spacing: (small ? 1.5 : 2) * u;
+        for b[i] in Track.bands: Rectangle {
+            width: root.bar-w;
+            VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    height: root.live ? root.min-h + (root.max-h - root.min-h) * b : root.min-h;
+                    border-radius: 2 * root.u;
+                    background: Track.muted ? #ffffff66 : Theme.c1.brighter(0.5);
+                    animate height { duration: 120ms; }
+                }
+            }
+        }
+    }
+    // Slash when muted.
+    if Track.muted: Rectangle {
+        width: (small ? 15 : 20) * u;
+        height: 2 * u;
+        border-radius: 1 * u;
+        background: white;
+        transform-rotation: -40deg;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// Seek bar; clicking jumps there.
+component SeekBar inherits Rectangle {
+    in property <length> u;
+    in property <bool> knob: true;
+    height: 14 * u;
+    Rectangle {
+        y: (parent.height - 3 * u) / 2;
+        height: 3 * u;
+        border-radius: 2 * u;
+        background: #ffffff38;
+    }
+    Rectangle {
+        x: 0;
+        y: (parent.height - 3 * u) / 2;
+        width: parent.width * Track.progress;
+        height: 3 * u;
+        border-radius: 2 * u;
+        background: white;
+    }
+    if knob: Rectangle {
+        x: parent.width * Track.progress - self.width / 2;
+        y: (parent.height - self.height) / 2;
+        width: (ta.has-hover ? 13 : 10) * u;
+        height: self.width;
+        border-radius: self.width / 2;
+        background: white;
+        drop-shadow-blur: 6 * u;
+        drop-shadow-color: Theme.c1;
+        animate width { duration: 150ms; }
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { if (Track.can-seek) { Track.seek-to(max(0, min(1, self.mouse-x / self.width))); } }
+    }
+}
+
+// Cover with the progress ring around it.
+component Cover inherits Rectangle {
+    in property <length> u;
+    in property <length> inset: 4 * u;
+    in property <length> img-radius: 5 * u;
+    in property <float> stroke: 2.5;
+    border-radius: 8 * u;
+    if Track.has-art: Rectangle {
+        x: root.inset;
+        y: root.inset;
+        width: parent.width - 2 * root.inset;
+        height: parent.height - 2 * root.inset;
+        border-radius: root.img-radius;
+        clip: true;
+        Image {
+            width: parent.width;
+            height: parent.height;
+            source: Track.art;
+            image-fit: cover;
+        }
+    }
+    if !Track.has-art: Rectangle {
+        x: root.inset;
+        y: root.inset;
+        width: parent.width - 2 * root.inset;
+        height: parent.height - 2 * root.inset;
+        border-radius: root.img-radius;
+        background: @linear-gradient(135deg, Theme.c1.with-alpha(0.35) 0%, Theme.c2.with-alpha(0.25) 100%);
+        Icon {
+            source: @image-url("icons/mark.svg");
+            width: parent.width * 0.4;
+            height: self.width;
+        }
+    }
+    // Track of the ring.
+    Path {
+        width: parent.width;
+        height: parent.height;
+        viewbox-width: 56;
+        viewbox-height: 56;
+        commands: "M 8.5 1.5 L 47.5 1.5 A 7 7 0 0 1 54.5 8.5 L 54.5 47.5 A 7 7 0 0 1 47.5 54.5 L 8.5 54.5 A 7 7 0 0 1 1.5 47.5 L 1.5 8.5 A 7 7 0 0 1 8.5 1.5 Z";
+        stroke: #ffffff1a;
+        stroke-width: root.stroke * root.u;
+        fill: transparent;
+    }
+    // Filled part of the ring.
+    Path {
+        width: parent.width;
+        height: parent.height;
+        viewbox-width: 56;
+        viewbox-height: 56;
+        commands: Track.ring-path;
+        stroke: Theme.c1;
+        stroke-width: root.stroke * root.u;
+        fill: transparent;
+        stroke-line-cap: round;
+    }
+}
+
+export component Overlay inherits Window {
+    // ---- Set from Rust ----
+    in property <float> scale: 1;
+    in property <bool> layout-cover;
+    in property <bool> cover-right;     // card mirrored: cover on the right
+    in property <bool> anchor-right;    // grows to the left
+    in property <bool> anchor-bottom;   // unfolds upwards
+    in property <bool> editing;
+    in property <bool> hot;             // pointer over it (hover mode)
+    in property <bool> always-expanded;
+    in property <bool> reactive: true;
+    in property <float> intensity: 1;
+    in property <float> card-opacity: 1;
+    in property <string> edit-key: "Alt+Shift+M";
+
+    callback drag();
+    callback grip(bool);
+
+    no-frame: true;
+    always-on-top: true;
+    background: transparent;
+    title: "Moa Overlay";
+
+    property <length> u: 1px * scale;
+    property <length> pad: 18 * u;
+    property <bool> open: editing || hot || always-expanded;
+    property <length> box-w: (layout-cover ? 96 : 300) * u;
+    property <length> box-h: (layout-cover ? 128 : 168) * u;
+    property <length> card-h: layout-cover ? 96 * u : (open ? 136 * u : 76 * u);
+    property <float> glow: reactive ? Track.pulse * intensity : 0;
+
+    width: box-w + 2 * pad;
+    height: box-h + 2 * pad;
+
+    // ===================== Card =====================
+    Rectangle {
+        x: root.pad;
+        y: root.anchor-bottom ? root.height - root.pad - root.card-h : root.pad;
+        width: root.box-w;
+        height: root.card-h;
+        opacity: root.card-opacity;
+        animate height, y { duration: 320ms; easing: cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+        // In edit mode, empty parts of the card drag the window; buttons
+        // above this area keep working.
+        if root.editing: TouchArea {
+            mouse-cursor: move;
+            pointer-event(e) => {
+                if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.drag(); }
+            }
+        }
+
+        // ---- Card style ----
+        if !root.layout-cover: Rectangle {
+            border-radius: 12 * root.u;
+            clip: true;
+            background: #121214;
+            drop-shadow-blur: (6 + 16 * root.glow) * root.u;
+            drop-shadow-color: Theme.c1.with-alpha(0.16 + 0.34 * root.glow);
+            drop-shadow-offset-y: 2 * root.u;
+
+            // Moving, blurred cover in the background.
+            if Track.has-art: Image {
+                property <float> t: animation-tick() / 14000ms;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                width: 420 * root.u * (1 + 0.06 * (1 - cos(t * 180deg)));
+                height: self.width;
+                source: Track.backdrop;
+                image-fit: cover;
+                image-rendering: smooth;
+                opacity: 0.55 + 0.25 * root.glow;
+                transform-rotation: 14deg * (1 - cos(t * 180deg)) / 2;
+            }
+            // Two soft colour blobs drifting around.
+            Rectangle {
+                property <float> t: animation-tick() / 11000ms;
+                x: (-60 + 70 * (1 - cos(t * 180deg))) * root.u;
+                y: (-90 + 20 * (1 - cos(t * 180deg))) * root.u;
+                width: 220 * root.u;
+                height: self.width;
+                background: @radial-gradient(circle, Theme.c1.with-alpha(0.8) 0%, Theme.c1.with-alpha(0.25) 40%, transparent 70%);
+                opacity: 0.26 + 0.3 * Track.energy * root.intensity + 0.25 * root.glow;
+            }
+            Rectangle {
+                property <float> t: animation-tick() / 13000ms;
+                x: parent.width - (150 + 75 * (1 - cos(t * 180deg))) * root.u;
+                y: parent.height - (110 - 15 * (1 - cos(t * 180deg))) * root.u;
+                width: 220 * root.u;
+                height: self.width;
+                background: @radial-gradient(circle, Theme.c2.with-alpha(0.75) 0%, Theme.c2.with-alpha(0.22) 40%, transparent 70%);
+                opacity: 0.26 + 0.3 * Track.energy * root.intensity + 0.25 * root.glow;
+            }
+            Rectangle {
+                background: root.cover-right
+                    ? @linear-gradient(270deg, #0a0a0c8c 0%, #0a0a0cc7 100%)
+                    : @linear-gradient(90deg, #0a0a0c8c 0%, #0a0a0cc7 100%);
+            }
+            Rectangle {
+                background: @radial-gradient(circle, Theme.c2.with-alpha(0.5) 0%, transparent 65%);
+                opacity: 0.32 * root.glow;
+            }
+
+            // ---- Top row: cover, title, artist, eq / play ----
+            Cover {
+                u: root.u;
+                x: root.cover-right ? parent.width - 12 * root.u - self.width : 10 * root.u;
+                y: 10 * root.u;
+                width: 56 * root.u;
+                height: 56 * root.u;
+            }
+            Rectangle {
+                x: root.cover-right ? 50 * root.u : 78 * root.u;
+                y: 18 * root.u;
+                width: parent.width - 128 * root.u;
+                height: 40 * root.u;
+                clip: true;
+                Text {
+                    property <length> over: max(0, self.preferred-width - parent.width);
+                    property <float> t: mod(animation-tick() / max(6000ms, 1ms * over / 1px * 55), 1);
+                    x: root.cover-right && over == 0 ? parent.width - self.preferred-width
+                        : over > 4px ? -over * max(0, min(1, (t - 0.15) / 0.7)) : 0;
+                    y: 0;
+                    text: Track.has-track ? Track.title : I18n.tr("overlay.idleTitle");
+                    color: white;
+                    font-size: 15 * root.u;
+                    font-weight: 650;
+                }
+                Text {
+                    x: root.cover-right ? parent.width - self.width : 0;
+                    y: 21 * root.u;
+                    width: parent.width;
+                    horizontal-alignment: root.cover-right ? right : left;
+                    text: Track.toasting ? Track.toast : (Track.has-track ? Track.artist : I18n.tr("overlay.idleArtist")).to-uppercase();
+                    color: Track.toasting ? white : #ffffff9e;
+                    font-size: 12 * root.u;
+                    font-weight: Track.toasting ? 600 : 400;
+                    letter-spacing: Track.toasting ? 0 : 0.3px * root.scale;
+                    overflow: elide;
+                }
+            }
+            if !root.open: Eq {
+                u: root.u;
+                x: root.cover-right ? 12 * root.u : parent.width - 12 * root.u - self.width;
+                y: 23 * root.u;
+                clicked => { Track.command("toggleMute"); }
+            }
+            if root.open: Btn {
+                x: root.cover-right ? 12 * root.u : parent.width - 12 * root.u - self.width;
+                y: 21 * root.u;
+                size: 34 * root.u;
+                icon-size: 22 * root.u;
+                icon: Track.playing ? @image-url("icons/f-pause.svg") : @image-url("icons/f-play.svg");
+                clicked => { Track.command("playPause"); }
+            }
+
+            // ---- Expanded: seek bar and controls ----
+            if root.open: Rectangle {
+                y: 70 * root.u;
+                height: 26 * root.u;
+                x: 10 * root.u;
+                width: parent.width - 22 * root.u;
+                HorizontalLayout {
+                    spacing: 8 * root.u;
+                    Text {
+                        width: 30 * root.u;
+                        vertical-alignment: center;
+                        text: Track.cur-text;
+                        color: #ffffffb3;
+                        font-size: 11 * root.u;
+                    }
+                    SeekBar { u: root.u; }
+                    Text {
+                        width: 34 * root.u;
+                        vertical-alignment: center;
+                        horizontal-alignment: right;
+                        text: Track.rem-text;
+                        color: #ffffffb3;
+                        font-size: 11 * root.u;
+                    }
+                }
+            }
+            if root.open: Rectangle {
+                y: 98 * root.u;
+                height: 34 * root.u;
+                x: 6 * root.u;
+                width: parent.width - 16 * root.u;
+                // Mirrored: the order flips so the eq sits next to the cover.
+                HorizontalLayout {
+                    alignment: space-between;
+                    if !root.cover-right: Eq { u: root.u; clicked => { Track.command("toggleMute"); } }
+                    if root.cover-right: HorizontalLayout {
+                        spacing: 2 * root.u;
+                        Btn { size: 30 * root.u; icon-size: 18 * root.u; icon: @image-url("icons/x.svg"); clicked => { Track.command("toggleOverlay"); } }
+                        Btn { size: 30 * root.u; icon-size: 18 * root.u; icon: @image-url("icons/app-window.svg"); clicked => { Track.command("showApp"); } }
+                    }
+                    HorizontalLayout {
+                        spacing: 2 * root.u;
+                        Btn { size: 30 * root.u; icon-size: 18 * root.u; icon: @image-url("icons/skip-back.svg"); clicked => { Track.command("previous"); } }
+                        Btn { size: 30 * root.u; icon-size: 18 * root.u; icon: @image-url("icons/skip-forward.svg"); clicked => { Track.command("next"); } }
+                        Btn {
+                            size: 30 * root.u;
+                            icon-size: 18 * root.u;
+                            icon: Track.repeat == "ONE" ? @image-url("icons/repeat-1.svg") : @image-url("icons/repeat.svg");
+                            tint: Track.repeat == "NONE" ? white : Theme.c1.brighter(0.4);
+                            enabled: Track.repeat-supported;
+                            clicked => { Track.command("cycleRepeat"); }
+                        }
+                    }
+                    if !root.cover-right: HorizontalLayout {
+                        spacing: 2 * root.u;
+                        Btn { size: 30 * root.u; icon-size: 18 * root.u; icon: @image-url("icons/app-window.svg"); clicked => { Track.command("showApp"); } }
+                        Btn { size: 30 * root.u; icon-size: 18 * root.u; icon: @image-url("icons/x.svg"); clicked => { Track.command("toggleOverlay"); } }
+                    }
+                    if root.cover-right: Eq { u: root.u; clicked => { Track.command("toggleMute"); } }
+                }
+            }
+        }
+
+        // ---- Cover style ----
+        if root.layout-cover: Rectangle {
+            // Beat glow behind the cover.
+            Rectangle {
+                x: -12 * root.u;
+                y: -12 * root.u;
+                width: parent.width + 24 * root.u;
+                height: parent.height + 24 * root.u;
+                background: @radial-gradient(circle, Theme.c1.with-alpha(0.9) 0%, Theme.c2.with-alpha(0.5) 55%, Theme.c2.with-alpha(0.15) 80%, transparent 100%);
+                opacity: Track.playing ? 0.3 + 0.55 * root.glow + 0.15 * Track.energy : 0.22;
+            }
+            Rectangle {
+                border-radius: 14 * root.u;
+                drop-shadow-blur: 14 * root.u;
+                drop-shadow-color: #00000073;
+                drop-shadow-offset-y: 4 * root.u;
+                background: #121214;
+            }
+            Cover {
+                u: root.u;
+                inset: 6 * root.u;
+                img-radius: 9 * root.u;
+                stroke: 3.5;
+                border-radius: 14 * root.u;
+            }
+            // Controls on top of the dimmed cover.
+            if root.open: Rectangle {
+                x: 6 * root.u;
+                y: 6 * root.u;
+                width: parent.width - 12 * root.u;
+                height: parent.height - 12 * root.u;
+                border-radius: 9 * root.u;
+                background: #08080ca8;
+                VerticalLayout {
+                    padding: 3 * root.u;
+                    padding-top: 2 * root.u;
+                    HorizontalLayout {
+                        alignment: space-between;
+                        Eq { u: root.u; small: true; clicked => { Track.command("toggleMute"); } }
+                        Btn {
+                            size: 22 * root.u;
+                            icon-size: 15 * root.u;
+                            icon: Track.repeat == "ONE" ? @image-url("icons/repeat-1.svg") : @image-url("icons/repeat.svg");
+                            tint: Track.repeat == "NONE" ? white : Theme.c1.brighter(0.4);
+                            enabled: Track.repeat-supported;
+                            clicked => { Track.command("cycleRepeat"); }
+                        }
+                    }
+                    HorizontalLayout {
+                        alignment: center;
+                        spacing: 1 * root.u;
+                        Btn { size: 22 * root.u; icon-size: 15 * root.u; icon: @image-url("icons/skip-back.svg"); clicked => { Track.command("previous"); } }
+                        Btn {
+                            size: 30 * root.u;
+                            icon-size: 20 * root.u;
+                            icon: Track.playing ? @image-url("icons/f-pause.svg") : @image-url("icons/f-play.svg");
+                            clicked => { Track.command("playPause"); }
+                        }
+                        Btn { size: 22 * root.u; icon-size: 15 * root.u; icon: @image-url("icons/skip-forward.svg"); clicked => { Track.command("next"); } }
+                    }
+                    SeekBar { u: root.u; knob: false; height: 10 * root.u; }
+                }
+            }
+        }
+
+        // ---- Edit mode: dashed outline ----
+        if root.editing: Rectangle {
+            x: root.layout-cover ? -3 * root.u : 0;
+            y: self.x;
+            width: parent.width - 2 * self.x;
+            height: parent.height - 2 * self.y;
+            border-radius: (root.layout-cover ? 16 : 12) * root.u;
+            border-width: 2 * root.u;
+            border-color: #ffffffcc;
+        }
+        // Resize grip in the corner that points away from the screen edges.
+        if root.editing: Rectangle {
+            property <length> off: root.layout-cover ? -14 * root.u : 0;
+            x: root.anchor-right ? off : parent.width - self.width - off;
+            y: root.anchor-bottom ? off : parent.height - self.height - off;
+            width: 18 * root.u;
+            height: 18 * root.u;
+            Path {
+                width: parent.width;
+                height: parent.height;
+                viewbox-width: 18;
+                viewbox-height: 18;
+                commands: root.anchor-right
+                    ? (root.anchor-bottom ? "M 3 12 L 3 3 L 12 3" : "M 3 6 L 3 15 L 12 15")
+                    : (root.anchor-bottom ? "M 6 3 L 15 3 L 15 12" : "M 15 6 L 15 15 L 6 15");
+                stroke: white;
+                stroke-width: 2.5 * root.u;
+                fill: transparent;
+                stroke-line-cap: round;
+            }
+            TouchArea {
+                mouse-cursor: (root.anchor-right != root.anchor-bottom) ? nesw-resize : nwse-resize;
+                pointer-event(e) => {
+                    if (e.kind == PointerEventKind.down) { root.grip(true); }
+                    if (e.kind == PointerEventKind.up) { root.grip(false); }
+                }
+            }
+        }
+    }
+
+    // ===================== Edit toolbar =====================
+    if root.editing: Rectangle {
+        x: root.pad;
+        y: root.anchor-bottom ? root.pad : root.pad + (root.layout-cover ? 102 : 142) * root.u;
+        width: root.box-w;
+        height: 26 * root.u;
+        border-radius: 9 * root.u;
+        background: #121118f0;
+        border-width: 1px;
+        border-color: #ffffff14;
+        drop-shadow-blur: 12 * root.u;
+        drop-shadow-color: #00000066;
+        TouchArea {
+            mouse-cursor: move;
+            pointer-event(e) => {
+                if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.drag(); }
+            }
+        }
+        HorizontalLayout {
+            padding-left: 3 * root.u;
+            padding-right: 3 * root.u;
+            spacing: 2 * root.u;
+            alignment: space-between;
+            HorizontalLayout {
+                spacing: 2 * root.u;
+                alignment: start;
+                if !root.layout-cover: Btn {
+                    y: 2 * root.u;
+                    size: 22 * root.u;
+                    icon-size: 15 * root.u;
+                    icon: @image-url("icons/arrow-left-right.svg");
+                    clicked => { Track.command("flipSide"); }
+                }
+                Btn {
+                    y: 2 * root.u;
+                    size: 22 * root.u;
+                    icon-size: 15 * root.u;
+                    icon: root.layout-cover ? @image-url("icons/rectangle-horizontal.svg") : @image-url("icons/square.svg");
+                    clicked => { Track.command("toggleLayout"); }
+                }
+            }
+            if !root.layout-cover: Text {
+                vertical-alignment: center;
+                horizontal-alignment: center;
+                text: root.edit-key + "  " + I18n.tr("overlay.editDone");
+                color: #ffffffb3;
+                font-size: 11 * root.u;
+                font-weight: 600;
+            }
+            Rectangle {
+                y: 2 * root.u;
+                width: 22 * root.u;
+                height: 22 * root.u;
+                border-radius: 6 * root.u;
+                background: Theme.c1;
+                Icon { source: @image-url("icons/check.svg"); width: 15 * root.u; height: self.width; }
+                TouchArea { mouse-cursor: pointer; clicked => { Track.command("editOverlay"); } }
+            }
+        }
+    }
+}

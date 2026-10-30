@@ -1,0 +1,953 @@
+import { I18n, Theme, Track, Icon } from "shared.slint";
+import { Palette, Switch, Slider, Seg, SegButton, ListRow, Card, Button, Label, Page } from "controls.slint";
+
+export struct Cfg {
+    overlay-visible: bool,
+    layout: string,
+    side: string,
+    interaction: string,
+    always-expanded: bool,
+    hide-idle: bool,
+    reactive: bool,
+    intensity: float,
+    opacity: float,
+    scale: float,
+    seek-step: float,
+    volume-step: float,
+    source: string,
+    service: string,
+    language: string,
+    autostart: bool,
+    close-to-tray: bool,
+    gpu: bool,
+}
+
+export struct HotkeyRow {
+    action: string,
+    label: string,
+    keys: [string],
+    failed: bool,
+}
+
+export struct GuideItem {
+    icon: string,
+    title: string,
+    intro: string,
+    steps: [string],
+}
+
+// Brand and line icons by name, for data coming from Rust.
+export global Icons {
+    pure public function get(name: string) -> image {
+        if (name == "youtubemusic") { return @image-url("icons/b-youtubemusic.svg"); }
+        if (name == "spotify") { return @image-url("icons/b-spotify.svg"); }
+        if (name == "soundcloud") { return @image-url("icons/b-soundcloud.svg"); }
+        if (name == "applemusic") { return @image-url("icons/b-applemusic.svg"); }
+        if (name == "deezer") { return @image-url("icons/b-deezer.svg"); }
+        if (name == "vk") { return @image-url("icons/b-vk.svg"); }
+        if (name == "tidal") { return @image-url("icons/b-tidal.svg"); }
+        if (name == "github") { return @image-url("icons/b-github.svg"); }
+        if (name == "googlechrome") { return @image-url("icons/b-googlechrome.svg"); }
+        if (name == "firefoxbrowser") { return @image-url("icons/b-firefoxbrowser.svg"); }
+        if (name == "zenbrowser") { return @image-url("icons/b-zenbrowser.svg"); }
+        if (name == "brave") { return @image-url("icons/b-brave.svg"); }
+        if (name == "opera") { return @image-url("icons/b-opera.svg"); }
+        if (name == "vivaldi") { return @image-url("icons/b-vivaldi.svg"); }
+        if (name == "globe") { return @image-url("icons/globe.svg"); }
+        if (name == "puzzle") { return @image-url("icons/puzzle.svg"); }
+        if (name == "monitor") { return @image-url("icons/monitor.svg"); }
+        if (name == "keyboard") { return @image-url("icons/keyboard.svg"); }
+        if (name == "layers") { return @image-url("icons/layers.svg"); }
+        if (name == "sparkles") { return @image-url("icons/sparkles.svg"); }
+        if (name == "info") { return @image-url("icons/info.svg"); }
+        if (name == "cpu") { return @image-url("icons/cpu.svg"); }
+        if (name == "app-window") { return @image-url("icons/app-window.svg"); }
+        if (name == "log-in") { return @image-url("icons/log-in.svg"); }
+        return @image-url("icons/music.svg");
+    }
+}
+
+component TabButton inherits Rectangle {
+    horizontal-stretch: 1;
+    in property <image> icon;
+    in property <string> text;
+    in property <bool> active;
+    callback clicked;
+    border-radius: 15px;
+    background: active ? Palette.accent-soft : transparent;
+    VerticalLayout {
+        alignment: center;
+        spacing: 2px;
+        Icon {
+            source: root.icon;
+            width: 20px;
+            height: 20px;
+            x: (parent.width - self.width) / 2;
+            colorize: root.active ? Theme.c1.brighter(0.35) : (ta.has-hover ? Palette.muted : Palette.faint);
+        }
+        Text {
+            horizontal-alignment: center;
+            text: root.text;
+            color: root.active ? Palette.text : (ta.has-hover ? Palette.muted : Palette.faint);
+            font-size: 10.5px;
+            font-weight: 600;
+        }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+component Ctl inherits Rectangle {
+    in property <image> icon;
+    in property <bool> big;
+    in property <bool> on;
+    in property <bool> enabled: true;
+    callback clicked;
+    width: big ? 64px : 44px;
+    height: self.width;
+    border-radius: self.width / 2;
+    background: big ? Palette.accent : (ta.has-hover ? Palette.panel-hi : transparent);
+    drop-shadow-blur: big ? 24px : 0;
+    drop-shadow-color: Theme.c1.with-alpha(0.35);
+    opacity: enabled ? 1 : 0.3;
+    Icon {
+        source: root.icon;
+        width: root.big ? 26px : 20px;
+        height: self.width;
+        colorize: root.big ? white : (root.on ? Theme.c1.brighter(0.4) : (ta.has-hover ? Palette.text : Palette.muted));
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { if (root.enabled) { root.clicked(); } } }
+}
+
+component Chip inherits Rectangle {
+    in property <image> icon;
+    in property <string> text;
+    in property <bool> on;
+    callback clicked;
+    height: 46px;
+    border-radius: 14px;
+    background: on ? Palette.accent-soft : (ta.has-hover ? Palette.panel-hi : Palette.panel);
+    border-width: 1px;
+    border-color: on ? Theme.c1.with-alpha(0.45) : Palette.line;
+    HorizontalLayout {
+        padding-left: 14px;
+        spacing: 10px;
+        Icon { y: (parent.height - self.height) / 2; source: root.icon; width: 18px; height: 18px; colorize: root.on ? Theme.c1.brighter(0.4) : Palette.muted; }
+        Text { vertical-alignment: center; text: root.text; color: root.on ? Palette.text : Palette.muted; font-size: 13px; font-weight: 600; }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+component Platform inherits Rectangle {
+    in property <image> icon;
+    in property <string> name;
+    in property <color> tile;
+    in property <color> fg: white;
+    callback clicked;
+    height: 78px;
+    border-radius: 16px;
+    background: ta.has-hover ? Palette.panel-hi : Palette.panel;
+    border-width: 1px;
+    border-color: Palette.line;
+    VerticalLayout {
+        alignment: center;
+        spacing: 7px;
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: root.tile;
+            border-width: 1px;
+            border-color: #ffffff1f;
+            Icon { source: root.icon; width: 21px; height: 21px; colorize: root.fg; }
+        }
+        Text { horizontal-alignment: center; text: root.name; color: Palette.muted; font-size: 11px; overflow: elide; }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+component Tile inherits Rectangle {
+    in property <image> icon;
+    in property <string> title;
+    in property <string> desc;
+    in property <bool> active;
+    callback clicked;
+    min-height: 62px;
+    border-radius: 16px;
+    background: active ? Palette.accent-soft : (ta.has-hover ? Palette.panel-hi : Palette.panel);
+    border-width: active ? 1.5px : 1px;
+    border-color: active ? Theme.c1.with-alpha(0.8) : Palette.line;
+    HorizontalLayout {
+        padding: 12px;
+        padding-left: 14px;
+        spacing: 12px;
+        Rectangle {
+            width: 36px;
+            height: 36px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 11px;
+            background: root.active ? Palette.accent : Palette.panel-hi;
+            Icon { source: root.icon; width: 18px; height: 18px; colorize: root.active ? white : Palette.muted; }
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 1px;
+            Text { text: root.title; color: Palette.text; font-size: 13px; font-weight: 650; }
+            if root.desc != "": Text { text: root.desc; color: Palette.muted; font-size: 12px; wrap: word-wrap; }
+        }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+component StyleTile inherits Rectangle {
+    in property <bool> cover;
+    in property <string> title;
+    in property <bool> active;
+    callback clicked;
+    height: 104px;
+    border-radius: 16px;
+    background: active ? Palette.accent-soft : (ta.has-hover ? Palette.panel-hi : Palette.panel);
+    border-width: active ? 1.5px : 1px;
+    border-color: active ? Theme.c1.with-alpha(0.8) : Palette.line;
+    VerticalLayout {
+        alignment: center;
+        spacing: 12px;
+        Rectangle {
+            height: 46px;
+            if !root.cover: Rectangle {
+                width: 112px;
+                height: 40px;
+                border-radius: 9px;
+                background: #1b1925;
+                border-width: 1px;
+                border-color: Palette.line;
+                Rectangle { x: 6px; width: 28px; height: 28px; border-radius: 6px; background: Palette.accent; }
+                Rectangle { x: 42px; y: 12px; width: 56px; height: 5px; border-radius: 2px; background: #ffffff8c; }
+                Rectangle { x: 42px; y: 22px; width: 38px; height: 4px; border-radius: 2px; background: #ffffff40; }
+            }
+            if root.cover: Rectangle {
+                width: 40px;
+                height: 40px;
+                border-radius: 9px;
+                background: Palette.accent;
+                border-width: 3px;
+                border-color: #ffffff59;
+                drop-shadow-blur: 14px;
+                drop-shadow-color: Theme.c1.with-alpha(0.7);
+            }
+        }
+        Text { horizontal-alignment: center; text: root.title; color: Palette.text; font-size: 13px; font-weight: 650; }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+component Keycap inherits Rectangle {
+    in property <string> text;
+    in property <bool> failed;
+    height: 26px;
+    min-width: 26px;
+    border-radius: 7px;
+    background: #ffffff14;
+    border-width: 1px;
+    border-color: failed ? Palette.warn : Palette.line;
+    HorizontalLayout {
+        padding-left: 7px;
+        padding-right: 7px;
+        Text {
+            vertical-alignment: center;
+            horizontal-alignment: center;
+            text: root.text;
+            color: root.failed ? #fdba74 : Palette.text;
+            font-size: 12px;
+            font-weight: 600;
+        }
+    }
+}
+
+component GuideSection inherits Rectangle {
+    in property <GuideItem> item;
+    in property <bool> first;
+    in-out property <bool> open;
+    if !root.first: Rectangle { y: 0; height: 1px; background: Palette.line; }
+    VerticalLayout {
+        Rectangle {
+            height: 52px;
+            HorizontalLayout {
+                padding-left: 14px;
+                padding-right: 14px;
+                spacing: 12px;
+                Rectangle {
+                    width: 30px;
+                    height: 30px;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: 9px;
+                    background: Palette.panel-hi;
+                    Icon { source: Icons.get(root.item.icon); width: 16px; height: 16px; colorize: Palette.text; }
+                }
+                Text { vertical-alignment: center; horizontal-stretch: 1; text: root.item.title; color: Palette.text; font-size: 13.5px; font-weight: 600; }
+                Text { vertical-alignment: center; text: root.open ? "−" : "+"; color: Palette.faint; font-size: 18px; }
+            }
+            TouchArea { mouse-cursor: pointer; clicked => { root.open = !root.open; } }
+        }
+        if root.open: VerticalLayout {
+            padding-left: 14px;
+            padding-right: 14px;
+            padding-bottom: 14px;
+            spacing: 8px;
+            if root.item.intro != "": Text { text: root.item.intro; color: Palette.muted; font-size: 12.5px; wrap: word-wrap; }
+            for step[i] in root.item.steps: HorizontalLayout {
+                spacing: 10px;
+                Rectangle {
+                    width: 22px;
+                    height: 22px;
+                    border-radius: 11px;
+                    background: Palette.accent;
+                    Text { text: i + 1; color: white; font-size: 11px; font-weight: 700; }
+                }
+                Text { horizontal-stretch: 1; text: step; color: Palette.text; font-size: 12.5px; wrap: word-wrap; vertical-alignment: center; }
+            }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    in property <Cfg> cfg;
+    in property <[HotkeyRow]> hotkeys;
+    in property <string> capturing;
+    in property <string> hk-msg;
+    in property <[GuideItem]> guide;
+    in property <bool> status-ok;
+    in property <string> status-text;
+    in property <bool> restart-note;
+    in property <string> version;
+    in property <string> ext-dir;
+    in property <bool> diag-copied;
+    in property <bool> spotify-connected;
+    in property <string> spotify-name;
+    in property <string> spotify-client-id;
+    in property <string> spotify-msg;
+    in-out property <string> tab: "home";
+
+    callback set-bool(string, bool);
+    callback set-num(string, float);
+    callback set-str(string, string);
+    callback action(string);
+    callback open-url(string);
+    callback win(string);
+    callback drag();
+    callback capture(string);
+    callback key(string, bool, bool, bool, bool) -> bool;
+    callback spotify(string, string);
+
+    title: "Moa";
+    icon: @image-url("../../assets/icon.png");
+    no-frame: true;
+    background: Palette.bg;
+    min-width: 400px;
+    min-height: 560px;
+    preferred-width: 440px;
+    preferred-height: 700px;
+    default-font-size: 14px;
+
+    // ---- Ambient colour wash from the cover ----
+    Rectangle {
+        x: -160px;
+        y: -180px;
+        width: 420px;
+        height: 420px;
+        background: @radial-gradient(circle, Theme.c1.with-alpha(0.28) 0%, transparent 70%);
+    }
+    Rectangle {
+        x: parent.width - 220px;
+        y: 120px;
+        width: 420px;
+        height: 420px;
+        background: @radial-gradient(circle, Theme.c2.with-alpha(0.16) 0%, transparent 70%);
+    }
+    if Track.has-art: Image {
+        y: -40px;
+        width: parent.width;
+        height: 380px;
+        source: Track.backdrop;
+        image-fit: cover;
+        image-rendering: smooth;
+        opacity: 0.14;
+    }
+
+    VerticalLayout {
+        // ---- Title bar ----
+        Rectangle {
+            height: 42px;
+            TouchArea {
+                pointer-event(e) => {
+                    if (e.kind == PointerEventKind.down && e.button == PointerEventButton.left) { root.drag(); }
+                }
+            }
+            HorizontalLayout {
+                padding-left: 14px;
+                padding-right: 6px;
+                spacing: 8px;
+                Image { y: (parent.height - self.height) / 2; source: @image-url("../../assets/icon.png"); width: 18px; height: 18px; image-rendering: pixelated; }
+                Text { vertical-alignment: center; text: "Moa"; color: Palette.text; font-weight: 700; horizontal-stretch: 1; }
+                for w in ["minimize", "close"]: Rectangle {
+                    width: 34px;
+                    height: 30px;
+                    y: 6px;
+                    border-radius: 9px;
+                    background: wt.has-hover ? (w == "close" ? #e5484d : Palette.panel-hi) : transparent;
+                    Icon { source: w == "close" ? @image-url("icons/x.svg") : @image-url("icons/minus.svg"); width: 16px; height: 16px; colorize: wt.has-hover ? white : Palette.muted; }
+                    wt := TouchArea { clicked => { root.win(w); } }
+                }
+            }
+        }
+
+        // ---- Pages ----
+        Rectangle {
+            vertical-stretch: 1;
+
+            // ================= Home =================
+            if root.tab == "home": Page {
+                VerticalLayout {
+                    padding: 16px;
+                    padding-top: 4px;
+                    spacing: 12px;
+                    // Cover
+                    Rectangle {
+                        height: 238px;
+                        Rectangle {
+                            x: (parent.width - self.width) / 2 + 12px;
+                            y: 18px;
+                            width: 196px;
+                            height: 196px;
+                            border-radius: 28px;
+                            background: Palette.accent;
+                            opacity: Track.playing ? 0.35 + 0.35 * Track.pulse : 0.25;
+                            drop-shadow-blur: 40px;
+                            drop-shadow-color: Theme.c1.with-alpha(0.6);
+                        }
+                        Rectangle {
+                            x: (parent.width - self.width) / 2;
+                            y: 6px;
+                            width: 220px;
+                            height: 220px;
+                            border-radius: 24px;
+                            clip: true;
+                            background: @linear-gradient(135deg, Theme.c1.with-alpha(0.35) 0%, Theme.c2.with-alpha(0.25) 100%);
+                            if Track.has-art && Track.has-track: Image { width: parent.width; height: parent.height; source: Track.art; image-fit: cover; }
+                            if !(Track.has-art && Track.has-track): Icon {
+                                property <float> t: Track.has-track ? 0 : animation-tick() / 2400ms;
+                                source: @image-url("icons/mark.svg");
+                                width: 64px * (1 + 0.04 * (1 - cos(t * 360deg)));
+                                height: self.width;
+                            }
+                        }
+                    }
+                    if Track.has-track: VerticalLayout {
+                        spacing: 2px;
+                        Text { horizontal-alignment: center; text: Track.title; color: Palette.text; font-size: 20px; font-weight: 700; overflow: elide; }
+                        Text { horizontal-alignment: center; text: Track.artist; color: Palette.muted; overflow: elide; }
+                        if Track.source-name != "": HorizontalLayout {
+                            alignment: center;
+                            padding-top: 8px;
+                            Rectangle {
+                                height: 24px;
+                                border-radius: 12px;
+                                background: Palette.panel;
+                                HorizontalLayout {
+                                    padding-left: 6px;
+                                    padding-right: 10px;
+                                    spacing: 6px;
+                                    Icon { y: 5px; source: Track.source-icon; width: 14px; height: 14px; colorize: Palette.muted; }
+                                    Text { vertical-alignment: center; text: Track.source-name; color: Palette.muted; font-size: 12px; }
+                                }
+                            }
+                        }
+                    }
+                    if Track.has-track: VerticalLayout {
+                        spacing: 4px;
+                        Slider {
+                            value: Track.progress;
+                            enabled: Track.can-seek;
+                            released(v) => { Track.seek-to(v); }
+                        }
+                        HorizontalLayout {
+                            Text { text: Track.cur-text; color: Palette.faint; font-size: 11.5px; horizontal-stretch: 1; }
+                            Text { text: Track.dur-text; color: Palette.faint; font-size: 11.5px; }
+                        }
+                    }
+                    if Track.has-track: HorizontalLayout {
+                        alignment: center;
+                        spacing: 10px;
+                        Ctl {
+                            y: 10px;
+                            icon: Track.repeat == "ONE" ? @image-url("icons/repeat-1.svg") : @image-url("icons/repeat.svg");
+                            on: Track.repeat != "NONE";
+                            enabled: Track.repeat-supported;
+                            clicked => { Track.command("cycleRepeat"); }
+                        }
+                        Ctl { y: 10px; icon: @image-url("icons/skip-back.svg"); clicked => { Track.command("previous"); } }
+                        Ctl { big: true; icon: Track.playing ? @image-url("icons/f-pause.svg") : @image-url("icons/f-play.svg"); clicked => { Track.command("playPause"); } }
+                        Ctl { y: 10px; icon: @image-url("icons/skip-forward.svg"); clicked => { Track.command("next"); } }
+                        Ctl {
+                            y: 10px;
+                            icon: Track.muted ? @image-url("icons/volume-x.svg") : @image-url("icons/volume-2.svg");
+                            enabled: Track.volume >= 0;
+                            clicked => { Track.command("toggleMute"); }
+                        }
+                    }
+                    if Track.has-track && Track.volume >= 0: HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        spacing: 10px;
+                        Icon { y: 1px; source: @image-url("icons/volume-2.svg"); width: 16px; height: 16px; colorize: Palette.faint; }
+                        Slider {
+                            minimum: 0;
+                            maximum: 100;
+                            step: 1;
+                            value: Track.volume;
+                            changed(v) => { Track.set-volume(v); }
+                        }
+                    }
+                    if Track.has-track && Track.volume < 0: Text {
+                        horizontal-alignment: center;
+                        text: I18n.tr("home.noVolume");
+                        color: Palette.faint;
+                        font-size: 11.5px;
+                        wrap: word-wrap;
+                    }
+
+                    // Nothing playing: services open in the browser in one click.
+                    if !Track.has-track: VerticalLayout {
+                        spacing: 14px;
+                        Text { horizontal-alignment: center; text: I18n.tr("home.idle"); color: Palette.text; font-size: 17px; font-weight: 700; wrap: word-wrap; }
+                        GridLayout {
+                            spacing: 10px;
+                            Row {
+                                Platform { horizontal-stretch: 1; name: "YouTube Music"; icon: @image-url("icons/b-youtubemusic.svg"); tile: #FF0000; clicked => { root.open-url("https://music.youtube.com/"); } }
+                                Platform { horizontal-stretch: 1; name: "Spotify"; icon: @image-url("icons/b-spotify.svg"); tile: #1DB954; clicked => { root.open-url("https://open.spotify.com/"); } }
+                                Platform { horizontal-stretch: 1; name: I18n.tr("home.yandex"); icon: @image-url("icons/music.svg"); tile: #FFCC00; fg: #111; clicked => { root.open-url("https://music.yandex.ru/"); } }
+                                Platform { horizontal-stretch: 1; name: "SoundCloud"; icon: @image-url("icons/b-soundcloud.svg"); tile: #FF5500; clicked => { root.open-url("https://soundcloud.com/"); } }
+                            }
+                            Row {
+                                Platform { horizontal-stretch: 1; name: "Apple Music"; icon: @image-url("icons/b-applemusic.svg"); tile: #FA243C; clicked => { root.open-url("https://music.apple.com/"); } }
+                                Platform { horizontal-stretch: 1; name: "Deezer"; icon: @image-url("icons/b-deezer.svg"); tile: #A238FF; clicked => { root.open-url("https://www.deezer.com/"); } }
+                                Platform { horizontal-stretch: 1; name: I18n.tr("home.vk"); icon: @image-url("icons/b-vk.svg"); tile: #0077FF; clicked => { root.open-url("https://vk.com/music"); } }
+                                Platform { horizontal-stretch: 1; name: "TIDAL"; icon: @image-url("icons/b-tidal.svg"); tile: #000000; clicked => { root.open-url("https://listen.tidal.com/"); } }
+                            }
+                        }
+                        Text { horizontal-alignment: center; text: I18n.tr("home.idleHint"); color: Palette.muted; font-size: 12.5px; wrap: word-wrap; }
+                    }
+
+                    // Quick toggles
+                    GridLayout {
+                        spacing: 8px;
+                        Row {
+                            Chip { horizontal-stretch: 1; icon: @image-url("icons/eye.svg"); text: I18n.tr("quick.overlay"); on: root.cfg.overlay-visible; clicked => { root.action("toggleOverlay"); } }
+                            Chip { horizontal-stretch: 1; icon: @image-url("icons/move.svg"); text: I18n.tr("quick.move"); clicked => { root.action("editOverlay"); } }
+                        }
+                        Row {
+                            Chip {
+                                horizontal-stretch: 1;
+                                icon: root.cfg.interaction == "locked" ? @image-url("icons/lock.svg") : @image-url("icons/lock-open.svg");
+                                text: root.cfg.interaction == "locked" ? I18n.tr("quick.lock") : I18n.tr("ov.hover");
+                                on: root.cfg.interaction == "locked";
+                                clicked => { root.action("toggleLock"); }
+                            }
+                            Chip {
+                                horizontal-stretch: 1;
+                                icon: root.cfg.layout == "cover" ? @image-url("icons/square.svg") : @image-url("icons/rectangle-horizontal.svg");
+                                text: root.cfg.layout == "cover" ? I18n.tr("ov.cover") : I18n.tr("ov.card");
+                                clicked => { root.action("toggleLayout"); }
+                            }
+                        }
+                    }
+                    HorizontalLayout {
+                        alignment: center;
+                        spacing: 8px;
+                        Rectangle {
+                            width: 7px;
+                            height: 7px;
+                            y: 6px;
+                            border-radius: 4px;
+                            background: root.status-ok ? Palette.ok : Palette.warn;
+                            drop-shadow-blur: 8px;
+                            drop-shadow-color: self.background;
+                        }
+                        Text { text: root.status-text; color: Palette.faint; font-size: 12px; }
+                    }
+                }
+            }
+
+            // ================= Overlay =================
+            if root.tab == "overlay": Page {
+                VerticalLayout {
+                    padding: 16px;
+                    padding-top: 4px;
+                    spacing: 18px;
+                    Text { text: I18n.tr("nav.overlay"); color: Palette.text; font-size: 22px; font-weight: 700; }
+                    VerticalLayout {
+                        Label { title: I18n.tr("ov.style"); }
+                        HorizontalLayout {
+                            spacing: 10px;
+                            StyleTile { horizontal-stretch: 1; title: I18n.tr("ov.card"); active: root.cfg.layout == "card"; clicked => { root.set-str("overlay.layout", "card"); } }
+                            StyleTile { horizontal-stretch: 1; cover: true; title: I18n.tr("ov.cover"); active: root.cfg.layout == "cover"; clicked => { root.set-str("overlay.layout", "cover"); } }
+                        }
+                    }
+                    VerticalLayout {
+                        Label { title: I18n.tr("ov.mouse"); desc: I18n.tr("ov.mouse.desc"); }
+                        Seg {
+                            SegButton { horizontal-stretch: 1; has-icon: true; icon: @image-url("icons/lock.svg"); text: I18n.tr("ov.locked"); active: root.cfg.interaction == "locked"; clicked => { root.set-str("overlay.interaction", "locked"); } }
+                            SegButton { horizontal-stretch: 1; has-icon: true; icon: @image-url("icons/lock-open.svg"); text: I18n.tr("ov.hover"); active: root.cfg.interaction == "hover"; clicked => { root.set-str("overlay.interaction", "hover"); } }
+                        }
+                    }
+                    if root.cfg.layout == "card": VerticalLayout {
+                        Label { title: I18n.tr("ov.side"); desc: I18n.tr("ov.side.desc"); }
+                        Seg {
+                            SegButton { horizontal-stretch: 1; has-icon: true; icon: @image-url("icons/sparkles.svg"); text: I18n.tr("ov.auto"); active: root.cfg.side == "auto"; clicked => { root.set-str("overlay.side", "auto"); } }
+                            SegButton { horizontal-stretch: 1; text: I18n.tr("ov.left"); active: root.cfg.side == "left"; clicked => { root.set-str("overlay.side", "left"); } }
+                            SegButton { horizontal-stretch: 1; text: I18n.tr("ov.right"); active: root.cfg.side == "right"; clicked => { root.set-str("overlay.side", "right"); } }
+                        }
+                    }
+                    Card {
+                        ListRow {
+                            first: true;
+                            icon: @image-url("icons/eye.svg");
+                            title: I18n.tr("ov.visible");
+                            desc: I18n.tr("ov.visible.desc");
+                            Switch { y: (parent.height - self.height) / 2; checked: root.cfg.overlay-visible; toggled(v) => { root.set-bool("overlay.visible", v); } }
+                        }
+                        ListRow {
+                            icon: @image-url("icons/rectangle-horizontal.svg");
+                            title: I18n.tr("ov.expanded");
+                            desc: I18n.tr("ov.expanded.desc");
+                            Switch { y: (parent.height - self.height) / 2; checked: root.cfg.always-expanded; toggled(v) => { root.set-bool("overlay.alwaysExpanded", v); } }
+                        }
+                        if root.cfg.always-expanded && root.cfg.interaction == "locked": Rectangle {
+                            background: #fb923c1a;
+                            HorizontalLayout {
+                                padding: 10px;
+                                padding-left: 14px;
+                                spacing: 10px;
+                                Icon { y: 2px; source: @image-url("icons/lock.svg"); width: 16px; height: 16px; colorize: #fdba74; }
+                                Text { horizontal-stretch: 1; text: I18n.tr("ov.lockedWarn"); color: #fdba74; font-size: 12.5px; wrap: word-wrap; }
+                                Button { width: 36px; height: 36px; icon: @image-url("icons/lock-open.svg"); clicked => { root.set-str("overlay.interaction", "hover"); } }
+                            }
+                        }
+                        ListRow {
+                            icon: @image-url("icons/eye-off.svg");
+                            title: I18n.tr("ov.hideIdle");
+                            desc: I18n.tr("ov.hideIdle.desc");
+                            Switch { y: (parent.height - self.height) / 2; checked: root.cfg.hide-idle; toggled(v) => { root.set-bool("overlay.hideWhenIdle", v); } }
+                        }
+                        ListRow {
+                            icon: @image-url("icons/sparkles.svg");
+                            title: I18n.tr("ov.glow");
+                            desc: I18n.tr("ov.glow.desc");
+                            Switch { y: (parent.height - self.height) / 2; checked: root.cfg.reactive; toggled(v) => { root.set-bool("overlay.reactive", v); } }
+                        }
+                    }
+                    Card {
+                        for s[i] in [
+                            { key: "overlay.intensity", title: I18n.tr("ov.intensity"), desc: "", min: 0.2, max: 2, step: 0.1, value: root.cfg.intensity, pct: false },
+                            { key: "overlay.opacity", title: I18n.tr("ov.opacity"), desc: "", min: 0.3, max: 1, step: 0.05, value: root.cfg.opacity, pct: true },
+                            { key: "overlay.scale", title: I18n.tr("ov.size"), desc: I18n.tr("ov.size.desc"), min: 0.6, max: 2.5, step: 0.05, value: root.cfg.scale, pct: true },
+                        ]: Rectangle {
+                            if i > 0: Rectangle { y: 0; height: 1px; background: Palette.line; }
+                            VerticalLayout {
+                                padding: 14px;
+                                spacing: 8px;
+                                HorizontalLayout {
+                                    VerticalLayout {
+                                        horizontal-stretch: 1;
+                                        Text { text: s.title; color: Palette.text; font-size: 13.5px; font-weight: 600; }
+                                        if s.desc != "": Text { text: s.desc; color: Palette.muted; font-size: 12px; }
+                                    }
+                                    Text { text: s.pct ? round(s.value * 100) + "%" : round(s.value * 10) / 10; color: Palette.muted; font-size: 12.5px; }
+                                }
+                                Slider { minimum: s.min; maximum: s.max; step: s.step; value: s.value; changed(v) => { root.set-num(s.key, v); } }
+                            }
+                        }
+                    }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Button { horizontal-stretch: 1; primary: true; icon: @image-url("icons/move.svg"); text: I18n.tr("ov.move"); clicked => { root.action("editOverlay"); } }
+                        Button { horizontal-stretch: 1; icon: @image-url("icons/rotate-ccw.svg"); text: I18n.tr("ov.reset"); clicked => { root.action("resetOverlay"); } }
+                    }
+                    Card {
+                        ListRow {
+                            first: true;
+                            icon: @image-url("icons/monitor.svg");
+                            title: I18n.tr("ov.fullscreen");
+                            desc: I18n.tr("ov.fullscreen.desc");
+                        }
+                    }
+                }
+            }
+
+            // ================= Keys =================
+            if root.tab == "keys": FocusScope {
+                key-pressed(e) => {
+                    if (root.capturing == "") { return reject; }
+                    if (root.key(e.text, e.modifiers.control, e.modifiers.alt, e.modifiers.shift, e.modifiers.meta)) { return accept; }
+                    return accept;
+                }
+                Page {
+                    VerticalLayout {
+                        padding: 16px;
+                        padding-top: 4px;
+                        spacing: 14px;
+                        Text { text: I18n.tr("nav.hotkeys"); color: Palette.text; font-size: 22px; font-weight: 700; }
+                        Text { text: I18n.tr("hk.hint"); color: Palette.muted; font-size: 12.5px; wrap: word-wrap; }
+                        if root.hk-msg != "": Rectangle {
+                            border-radius: 12px;
+                            background: #fb923c1f;
+                            HorizontalLayout {
+                                padding: 10px;
+                                padding-left: 12px;
+                                Text { text: root.hk-msg; color: #fdba74; font-size: 12.5px; wrap: word-wrap; }
+                            }
+                        }
+                        Card {
+                            for h[i] in root.hotkeys: Rectangle {
+                                min-height: 48px;
+                                if i > 0: Rectangle { y: 0; height: 1px; background: Palette.line; }
+                                HorizontalLayout {
+                                    padding-left: 14px;
+                                    padding-right: 8px;
+                                    spacing: 10px;
+                                    Text { vertical-alignment: center; horizontal-stretch: 1; text: h.label; color: Palette.text; font-size: 13px; overflow: elide; }
+                                    Rectangle {
+                                        y: (parent.height - 36px) / 2;
+                                        height: 36px;
+                                        border-radius: 10px;
+                                        background: root.capturing == h.action ? Theme.c1.with-alpha(0.35) : (kt.has-hover ? Palette.panel-hi : transparent);
+                                        HorizontalLayout {
+                                            padding: 5px;
+                                            spacing: 4px;
+                                            if root.capturing == h.action: Text { vertical-alignment: center; text: I18n.tr("hk.press"); color: white; font-size: 12px; }
+                                            if root.capturing != h.action && h.keys.length == 0: Text { vertical-alignment: center; text: I18n.tr("hk.unset"); color: Palette.faint; font-size: 12px; }
+                                            if root.capturing != h.action: HorizontalLayout {
+                                                spacing: 4px;
+                                                for k in h.keys: Keycap { text: k; failed: h.failed; }
+                                            }
+                                        }
+                                        kt := TouchArea { mouse-cursor: pointer; clicked => { root.capture(h.action); } }
+                                    }
+                                }
+                            }
+                        }
+                        Card {
+                            for s[i] in [
+                                { key: "playback.seekStep", title: I18n.tr("hk.seekStep"), unit: I18n.tr("hk.sec"), min: 1, max: 30, value: root.cfg.seek-step },
+                                { key: "playback.volumeStep", title: I18n.tr("hk.volumeStep"), unit: "%", min: 1, max: 20, value: root.cfg.volume-step },
+                            ]: Rectangle {
+                                if i > 0: Rectangle { y: 0; height: 1px; background: Palette.line; }
+                                VerticalLayout {
+                                    padding: 14px;
+                                    spacing: 8px;
+                                    HorizontalLayout {
+                                        Text { horizontal-stretch: 1; text: s.title; color: Palette.text; font-size: 13.5px; font-weight: 600; }
+                                        Text { text: round(s.value) + " " + s.unit; color: Palette.muted; font-size: 12.5px; }
+                                    }
+                                    Slider { minimum: s.min; maximum: s.max; step: 1; value: s.value; changed(v) => { root.set-num(s.key, v); } }
+                                }
+                            }
+                        }
+                        Button { icon: @image-url("icons/rotate-ccw.svg"); text: I18n.tr("hk.reset"); clicked => { root.action("resetHotkeys"); } }
+                    }
+                }
+            }
+
+            // ================= Guide =================
+            if root.tab == "guide": Page {
+                VerticalLayout {
+                    padding: 16px;
+                    padding-top: 4px;
+                    spacing: 14px;
+                    Text { text: I18n.tr("nav.guide"); color: Palette.text; font-size: 22px; font-weight: 700; }
+                    Text { text: I18n.tr("guide.intro"); color: Palette.muted; font-size: 12.5px; wrap: word-wrap; }
+                    Card {
+                        for g[i] in root.guide: GuideSection { item: g; first: i == 0; open: i == 0; }
+                    }
+                }
+            }
+
+            // ================= Settings =================
+            if root.tab == "settings": Page {
+                VerticalLayout {
+                    padding: 16px;
+                    padding-top: 4px;
+                    spacing: 18px;
+                    Text { text: I18n.tr("nav.settings"); color: Palette.text; font-size: 22px; font-weight: 700; }
+                    VerticalLayout {
+                        spacing: 8px;
+                        Label { title: I18n.tr("src.title"); }
+                        Tile { icon: @image-url("icons/sparkles.svg"); title: I18n.tr("src.system"); desc: I18n.tr("src.system.desc"); active: root.cfg.source == "system"; clicked => { root.set-str("general.source", "system"); } }
+                        Tile { icon: @image-url("icons/app-window.svg"); title: I18n.tr("src.player"); desc: I18n.tr("src.player.desc"); active: root.cfg.source == "player"; clicked => { root.set-str("general.source", "player"); } }
+                        Tile { icon: @image-url("icons/puzzle.svg"); title: I18n.tr("src.browser"); desc: I18n.tr("src.browser.desc"); active: root.cfg.source == "browser"; clicked => { root.set-str("general.source", "browser"); } }
+                    }
+                    if root.cfg.source == "player": VerticalLayout {
+                        spacing: 8px;
+                        Label { title: I18n.tr("player.service"); desc: I18n.tr("player.service.desc"); }
+                        Seg {
+                            SegButton { horizontal-stretch: 1; text: I18n.tr("home.yandex"); active: root.cfg.service == "yandex"; clicked => { root.set-str("general.service", "yandex"); } }
+                            SegButton { horizontal-stretch: 1; text: "SoundCloud"; active: root.cfg.service == "soundcloud"; clicked => { root.set-str("general.service", "soundcloud"); } }
+                            SegButton { horizontal-stretch: 1; text: "VK"; active: root.cfg.service == "vk"; clicked => { root.set-str("general.service", "vk"); } }
+                            SegButton { horizontal-stretch: 1; text: "YouTube"; active: root.cfg.service == "youtube"; clicked => { root.set-str("general.service", "youtube"); } }
+                        }
+                        Button { primary: true; icon: @image-url("icons/log-in.svg"); text: I18n.tr("player.open"); clicked => { root.action("openPlayer"); } }
+                    }
+                    if root.cfg.source == "browser": Card {
+                        ListRow {
+                            first: true;
+                            has-icon: false;
+                            title: I18n.tr("ext.step1");
+                            desc: root.ext-dir;
+                            Button { y: (parent.height - self.height) / 2; width: 36px; height: 36px; icon: @image-url("icons/folder-open.svg"); clicked => { root.action("openExtensionFolder"); } }
+                        }
+                        ListRow { has-icon: false; title: I18n.tr("ext.step2"); desc: "chrome://extensions · " + I18n.tr("ext.step2b"); }
+                        ListRow {
+                            has-icon: false;
+                            title: I18n.tr("ext.step3");
+                            Button { y: (parent.height - self.height) / 2; width: 36px; height: 36px; icon: @image-url("icons/book-open.svg"); clicked => { root.tab = "guide"; } }
+                        }
+                    }
+
+                    // Spotify account (official sign-in in the browser)
+                    VerticalLayout {
+                        spacing: 8px;
+                        Label { title: I18n.tr("sp.title"); desc: I18n.tr("sp.desc"); }
+                        Card {
+                            ListRow {
+                                first: true;
+                                icon: @image-url("icons/b-spotify.svg");
+                                title: root.spotify-connected ? root.spotify-name : I18n.tr("sp.notConnected");
+                                desc: root.spotify-msg;
+                                if root.spotify-connected: Button { y: (parent.height - self.height) / 2; width: 36px; height: 36px; icon: @image-url("icons/log-out.svg"); clicked => { root.spotify("logout", ""); } }
+                            }
+                            if !root.spotify-connected: VerticalLayout {
+                                padding: 14px;
+                                padding-top: 0;
+                                spacing: 8px;
+                                Text { text: I18n.tr("sp.clientId"); color: Palette.muted; font-size: 12px; wrap: word-wrap; }
+                                Rectangle {
+                                    height: 38px;
+                                    border-radius: 10px;
+                                    background: #00000040;
+                                    border-width: 1px;
+                                    border-color: ti.has-focus ? Theme.c1 : Palette.line;
+                                    ti := TextInput {
+                                        x: 10px;
+                                        width: parent.width - 20px;
+                                        vertical-alignment: center;
+                                        text: root.spotify-client-id;
+                                        color: Palette.text;
+                                        font-size: 13px;
+                                        single-line: true;
+                                    }
+                                }
+                                HorizontalLayout {
+                                    spacing: 8px;
+                                    Button { primary: true; icon: @image-url("icons/log-in.svg"); text: I18n.tr("sp.connect"); clicked => { root.spotify("login", ti.text); } }
+                                    Button { icon: @image-url("icons/book-open.svg"); text: I18n.tr("sp.how"); clicked => { root.tab = "guide"; } }
+                                }
+                            }
+                        }
+                    }
+
+                    VerticalLayout {
+                        Label { title: I18n.tr("gen.language"); }
+                        Seg {
+                            SegButton { horizontal-stretch: 1; has-icon: true; icon: @image-url("icons/globe.svg"); text: I18n.tr("gen.auto"); active: root.cfg.language == "auto"; clicked => { root.set-str("general.language", "auto"); } }
+                            SegButton { horizontal-stretch: 1; text: "Русский"; active: root.cfg.language == "ru"; clicked => { root.set-str("general.language", "ru"); } }
+                            SegButton { horizontal-stretch: 1; text: "English"; active: root.cfg.language == "en"; clicked => { root.set-str("general.language", "en"); } }
+                        }
+                    }
+                    Card {
+                        ListRow {
+                            first: true;
+                            icon: @image-url("icons/power.svg");
+                            title: I18n.tr("gen.autostart");
+                            desc: I18n.tr("gen.autostart.desc");
+                            Switch { y: (parent.height - self.height) / 2; checked: root.cfg.autostart; toggled(v) => { root.set-bool("general.autostart", v); } }
+                        }
+                        ListRow {
+                            icon: @image-url("icons/minus.svg");
+                            title: I18n.tr("gen.tray");
+                            desc: I18n.tr("gen.tray.desc");
+                            Switch { y: (parent.height - self.height) / 2; checked: root.cfg.close-to-tray; toggled(v) => { root.set-bool("general.closeToTray", v); } }
+                        }
+                        ListRow {
+                            icon: @image-url("icons/cpu.svg");
+                            title: I18n.tr("gen.gpu");
+                            desc: I18n.tr("gen.gpu.desc");
+                            Switch { y: (parent.height - self.height) / 2; checked: root.cfg.gpu; toggled(v) => { root.set-bool("general.gpu", v); } }
+                        }
+                        ListRow {
+                            icon: @image-url("icons/copy.svg");
+                            title: I18n.tr("gen.diag");
+                            desc: root.diag-copied ? I18n.tr("gen.diagCopied") : I18n.tr("gen.diag.desc");
+                            Button { y: (parent.height - self.height) / 2; width: 36px; height: 36px; icon: @image-url("icons/copy.svg"); clicked => { root.action("copyDiagnostics"); } }
+                        }
+                    }
+                    if root.restart-note: Text { text: I18n.tr("gen.restart"); color: Palette.muted; font-size: 12px; }
+                    Rectangle {
+                        height: 66px;
+                        border-radius: Palette.radius;
+                        background: Palette.panel;
+                        border-width: 1px;
+                        border-color: Palette.line;
+                        HorizontalLayout {
+                            padding: 14px;
+                            spacing: 12px;
+                            Image { source: @image-url("../../assets/icon.png"); width: 34px; height: 34px; image-rendering: pixelated; y: 2px; }
+                            VerticalLayout {
+                                alignment: center;
+                                horizontal-stretch: 1;
+                                Text { text: "Moa " + root.version; color: Palette.text; font-weight: 700; }
+                                Text { text: "Music Overlay App"; color: Palette.faint; font-size: 12px; }
+                            }
+                            for b in [
+                                { icon: @image-url("icons/b-github.svg"), url: "https://github.com/godes2020/maol" },
+                                { icon: @image-url("icons/info.svg"), url: "https://github.com/godes2020/maol/issues/new" },
+                            ]: Rectangle {
+                                width: 38px;
+                                height: 38px;
+                                border-radius: 12px;
+                                background: bt.has-hover ? Palette.accent : Palette.panel-hi;
+                                Icon { source: b.icon; width: 18px; height: 18px; colorize: bt.has-hover ? white : Palette.muted; }
+                                bt := TouchArea { mouse-cursor: pointer; clicked => { root.open-url(b.url); } }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ---- Bottom tab bar ----
+        Rectangle {
+            height: 70px;
+            Rectangle {
+                x: 12px;
+                y: 0;
+                width: parent.width - 24px;
+                height: 58px;
+                border-radius: 20px;
+                background: #16141ede;
+                border-width: 1px;
+                border-color: Palette.line;
+                drop-shadow-blur: 30px;
+                drop-shadow-color: #00000059;
+                HorizontalLayout {
+                    padding: 5px;
+                    spacing: 4px;
+                    TabButton { horizontal-stretch: 1; icon: @image-url("icons/house.svg"); text: I18n.tr("nav.home"); active: root.tab == "home"; clicked => { root.tab = "home"; } }
+                    TabButton { horizontal-stretch: 1; icon: @image-url("icons/layers.svg"); text: I18n.tr("nav.overlay"); active: root.tab == "overlay"; clicked => { root.tab = "overlay"; } }
+                    TabButton { horizontal-stretch: 1; icon: @image-url("icons/keyboard.svg"); text: I18n.tr("nav.hotkeys"); active: root.tab == "keys"; clicked => { root.tab = "keys"; } }
+                    TabButton { horizontal-stretch: 1; icon: @image-url("icons/book-open.svg"); text: I18n.tr("nav.guide"); active: root.tab == "guide"; clicked => { root.tab = "guide"; } }
+                    TabButton { horizontal-stretch: 1; icon: @image-url("icons/settings.svg"); text: I18n.tr("nav.settings"); active: root.tab == "settings"; clicked => { root.tab = "settings"; } }
+                }
+            }
+        }
+    }
+}

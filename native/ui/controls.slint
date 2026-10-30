@@ -1,0 +1,248 @@
+// Custom controls for the Moa window: everything drawn by Moa itself so it
+// looks the same on every system.
+import { Theme, Icon } from "shared.slint";
+
+export global Palette {
+    out property <color> bg: #0c0b10;
+    out property <color> panel: #ffffff0b;
+    out property <color> panel-hi: #ffffff13;
+    out property <color> line: #ffffff12;
+    out property <color> text: #f4f2fa;
+    out property <color> muted: #f4f2fa8c;
+    out property <color> faint: #f4f2fa52;
+    out property <color> warn: #fb923c;
+    out property <color> ok: #34d399;
+    out property <length> radius: 16px;
+    out property <brush> accent: @linear-gradient(135deg, Theme.c1 0%, Theme.c2 100%);
+    out property <brush> accent-soft: @linear-gradient(135deg, Theme.c1.with-alpha(0.22) 0%, Theme.c2.with-alpha(0.12) 100%);
+}
+
+export component Switch inherits Rectangle {
+    in-out property <bool> checked;
+    callback toggled(bool);
+    width: 44px;
+    height: 26px;
+    border-radius: 13px;
+    background: checked ? Palette.accent : #ffffff1f;
+    Rectangle {
+        x: root.checked ? 21px : 3px;
+        y: 3px;
+        width: 20px;
+        height: 20px;
+        border-radius: 10px;
+        background: white;
+        drop-shadow-blur: 6px;
+        drop-shadow-color: #00000059;
+        animate x { duration: 250ms; easing: cubic-bezier(0.3, 1.4, 0.5, 1); }
+    }
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.checked = !root.checked;
+            root.toggled(root.checked);
+        }
+    }
+}
+
+export component Slider inherits Rectangle {
+    in property <float> minimum: 0;
+    in property <float> maximum: 1;
+    in property <float> step: 0;
+    in-out property <float> value;
+    in property <bool> enabled: true;
+    callback changed(float);
+    callback released(float);
+    height: 18px;
+    property <float> ratio: maximum > minimum ? (value - minimum) / (maximum - minimum) : 0;
+    Rectangle {
+        y: (parent.height - 6px) / 2;
+        height: 6px;
+        border-radius: 3px;
+        background: #ffffff1f;
+    }
+    Rectangle {
+        x: 0;
+        y: (parent.height - 6px) / 2;
+        width: parent.width * max(0, min(1, root.ratio));
+        height: 6px;
+        border-radius: 3px;
+        background: @linear-gradient(90deg, Theme.c1 0%, Theme.c2 100%);
+    }
+    Rectangle {
+        x: parent.width * max(0, min(1, root.ratio)) - self.width / 2;
+        y: (parent.height - self.height) / 2;
+        width: ta.pressed ? 18px : 16px;
+        height: self.width;
+        border-radius: self.width / 2;
+        background: white;
+        drop-shadow-blur: 8px;
+        drop-shadow-color: #00000066;
+        border-width: ta.has-hover ? 5px : 0;
+        border-color: Theme.c1.with-alpha(0.25);
+        animate width { duration: 150ms; }
+    }
+    function set-from(x: length) {
+        let r = max(0, min(1, x / root.width));
+        let v = root.minimum + r * (root.maximum - root.minimum);
+        root.value = root.step > 0 ? round(v / root.step) * root.step : v;
+        root.changed(root.value);
+    }
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) { root.set-from(self.mouse-x); }
+            if (e.kind == PointerEventKind.up) { root.released(root.value); }
+        }
+        moved => { if (self.pressed) { root.set-from(self.mouse-x); } }
+    }
+}
+
+// One option of a segmented control.
+export component SegButton inherits Rectangle {
+    in property <string> text;
+    in property <image> icon;
+    in property <bool> has-icon;
+    in property <bool> active;
+    callback clicked;
+    height: 36px;
+    border-radius: 10px;
+    background: active ? @linear-gradient(135deg, Theme.c1.with-alpha(0.9) 0%, Theme.c2.with-alpha(0.8) 100%) : transparent;
+    drop-shadow-blur: active ? 14px : 0;
+    drop-shadow-color: Theme.c1.with-alpha(0.3);
+    HorizontalLayout {
+        alignment: center;
+        spacing: 6px;
+        if root.has-icon: Icon {
+            y: (parent.height - self.height) / 2;
+            source: root.icon;
+            width: 15px;
+            height: 15px;
+            colorize: root.active ? white : (ta.has-hover ? Palette.text : Palette.muted);
+        }
+        Text {
+            vertical-alignment: center;
+            text: root.text;
+            color: root.active ? white : (ta.has-hover ? Palette.text : Palette.muted);
+            font-size: 13px;
+            font-weight: 600;
+        }
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component Seg inherits Rectangle {
+    border-radius: 14px;
+    background: Palette.panel;
+    border-width: 1px;
+    border-color: Palette.line;
+    height: 44px;
+    HorizontalLayout {
+        padding: 4px;
+        spacing: 4px;
+        @children
+    }
+}
+
+// A row inside a card list: icon, title, description, control on the right.
+export component ListRow inherits Rectangle {
+    in property <image> icon;
+    in property <bool> has-icon: true;
+    in property <string> title;
+    in property <string> desc;
+    in property <bool> first;
+    callback clicked;
+    min-height: 56px;
+    if !root.first: Rectangle {
+        y: 0;
+        height: 1px;
+        background: Palette.line;
+    }
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        spacing: 12px;
+        if root.has-icon: Rectangle {
+            width: 32px;
+            height: 32px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 10px;
+            background: Palette.panel-hi;
+            Icon { source: root.icon; width: 16px; height: 16px; colorize: Palette.muted; }
+        }
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            spacing: 1px;
+            Text { text: root.title; color: Palette.text; font-size: 13.5px; font-weight: 600; wrap: word-wrap; }
+            if root.desc != "": Text { text: root.desc; color: Palette.muted; font-size: 12px; wrap: word-wrap; }
+        }
+        @children
+    }
+}
+
+export component Card inherits Rectangle {
+    border-radius: Palette.radius;
+    background: Palette.panel;
+    border-width: 1px;
+    border-color: Palette.line;
+    clip: true;
+    VerticalLayout {
+        @children
+    }
+}
+
+export component Button inherits Rectangle {
+    in property <string> text;
+    in property <image> icon;
+    in property <bool> has-icon: true;
+    in property <bool> primary;
+    callback clicked;
+    height: 42px;
+    border-radius: 13px;
+    background: primary ? Palette.accent : (ta.has-hover ? #ffffff1c : Palette.panel-hi);
+    border-width: primary ? 0 : 1px;
+    border-color: Palette.line;
+    drop-shadow-blur: primary ? 20px : 0;
+    drop-shadow-color: Theme.c1.with-alpha(0.3);
+    HorizontalLayout {
+        alignment: center;
+        spacing: 8px;
+        padding-left: 12px;
+        padding-right: 12px;
+        if root.has-icon: Icon { y: (parent.height - self.height) / 2; source: root.icon; width: 16px; height: 16px; }
+        if root.text != "": Text { vertical-alignment: center; text: root.text; color: white; font-size: 13px; font-weight: 600; }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+export component Label inherits VerticalLayout {
+    in property <string> title;
+    in property <string> desc;
+    padding-left: 2px;
+    padding-bottom: 8px;
+    spacing: 1px;
+    Text { text: root.title; color: Palette.text; font-size: 13px; font-weight: 650; }
+    if root.desc != "": Text { text: root.desc; color: Palette.muted; font-size: 12px; wrap: word-wrap; }
+}
+
+// Scrollable page with a slim custom scrollbar.
+export component Page inherits Rectangle {
+    fl := Flickable {
+        viewport-width: self.width;
+        @children
+    }
+    if fl.content-height > root.height + 1px: Rectangle {
+        x: parent.width - 7px;
+        width: 4px;
+        height: max(40px, root.height * root.height / fl.content-height);
+        y: (root.height - self.height) * (-fl.content-y / max(1px, fl.content-height - root.height));
+        border-radius: 2px;
+        background: #ffffff26;
+    }
+}

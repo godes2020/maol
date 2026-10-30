@@ -1,0 +1,276 @@
+{
+ "ru": [
+  {
+   "icon": "sparkles",
+   "title": "Быстрый старт",
+   "intro": "Moa сама видит музыку из любого плеера на компьютере. Ничего ставить не нужно.",
+   "steps": [
+    "Включи музыку где угодно: на сайте в браузере или в приложении (Spotify, Яндекс Музыка…). На Главной есть кнопки сервисов — они открывают сайт в браузере в один клик.",
+    "Войди там в свой аккаунт, как обычно, и нажми play.",
+    "Трек появится на Главной и в оверлее слева вверху. Готово.",
+    "Переместить оверлей: Alt+Shift+M, перетащи, потяни за уголок для размера, ✓ — готово."
+   ]
+  },
+  {
+   "icon": "googlechrome",
+   "title": "Chrome, Edge, Яндекс Браузер, Opera, Brave, Vivaldi",
+   "intro": "Работают сами: эти браузеры передают трек в медиа-панель Windows.",
+   "steps": [
+    "Открой сайт музыки и включи песню.",
+    "Если Moa пишет «Ничего не играет», нажми на клавиатуре клавишу громкости: в панели Windows должен быть трек из браузера.",
+    "Если трека там нет — открой chrome://flags (в Edge: edge://flags), найди «Hardware Media Key Handling» и включи (Enabled). Перезапусти браузер.",
+    "Громкость в Moa меняет ползунок браузера в микшере Windows, а не общую громкость."
+   ]
+  },
+  {
+   "icon": "zenbrowser",
+   "title": "Firefox, Zen, LibreWolf, Floorp",
+   "intro": "Тоже работают сами, если в браузере включено медиа-управление Windows.",
+   "steps": [
+    "Открой сайт музыки и включи песню.",
+    "Если Moa не видит трек: в адресной строке открой about:config и согласись с предупреждением.",
+    "Найди media.hardwaremediakeys.enabled и поставь true (двойной клик).",
+    "Перезапусти браузер и снова включи музыку."
+   ]
+  },
+  {
+   "icon": "music",
+   "title": "Яндекс Музыка",
+   "intro": "Три способа — выбери любой.",
+   "steps": [
+    "Приложение Яндекс Музыки: просто слушай, Moa подхватит сама.",
+    "Сайт music.yandex.ru в любом браузере: открой, войди, включи «Мою волну».",
+    "Без браузера: Настройки → Откуда музыка → «Плеер в Moa» → Яндекс Музыка → «Открыть плеер». Войди в аккаунт прямо в окне — вход запомнится, «Моя волна», плейлисты и лайки будут на месте.",
+    "Окно плеера можно закрыть — музыка продолжит играть. Чтобы освободить память, выбери другой источник."
+   ]
+  },
+  {
+   "icon": "spotify",
+   "title": "Spotify и вход в аккаунт",
+   "intro": "Приложение и сайт Spotify Moa видит сама. Подключение аккаунта показывает в Moa твой профиль и плейлисты и запускает их в Spotify.",
+   "steps": [
+    "Открой developer.spotify.com/dashboard и войди своим аккаунтом Spotify.",
+    "Нажми «Create app». Название и описание — любые, например Moa.",
+    "В поле Redirect URI впиши ровно: http://127.0.0.1:47825/callback и нажми Add.",
+    "Отметь Web API, согласись с условиями и сохрани.",
+    "Открой созданное приложение → Settings → скопируй Client ID.",
+    "В Moa: Настройки → Spotify → вставь Client ID → «Войти через Spotify».",
+    "Откроется браузер: нажми «Принять». Вернись в Moa — аккаунт подключён.",
+    "Запуск плейлистов из Moa работает с Spotify Premium, приложение Spotify должно быть открыто."
+   ]
+  },
+  {
+   "icon": "youtubemusic",
+   "title": "YouTube Music",
+   "intro": "Слушай в браузере, Moa подхватит сама. Google не даёт входить в аккаунт во встроенных окнах, поэтому только браузер.",
+   "steps": [
+    "Открой music.youtube.com в браузере, войди, включи музыку.",
+    "Хочешь точный повтор и подсветку только от музыки (без звуков игры)? Поставь расширение Moa Connector — раздел «Расширение браузера».",
+    "Плеер в Moa для YouTube Music работает только без входа в аккаунт."
+   ]
+  },
+  {
+   "icon": "soundcloud",
+   "title": "SoundCloud, VK Музыка, Apple Music, Deezer, TIDAL",
+   "intro": "Работают через браузер или свои приложения.",
+   "steps": [
+    "Открой сервис (кнопки на Главной) и войди в аккаунт.",
+    "Включи музыку — Moa покажет трек.",
+    "SoundCloud и VK Музыку можно слушать и в «Плеере в Moa» (Настройки → Откуда музыка).",
+    "Повтор работает, только если сам сервис даёт им управлять."
+   ]
+  },
+  {
+   "icon": "monitor",
+   "title": "Оверлей в играх",
+   "intro": "По умолчанию оверлей закреплён: клики проходят сквозь него прямо в игру.",
+   "steps": [
+    "Включи в игре режим «Окно без рамки» или «Полноэкранный оконный». В эксклюзивном полноэкранном Windows никому не даёт рисовать поверх игры.",
+    "Dota 2: Настройки → Видео → Режим отображения → «Окно без рамки».",
+    "CS2: Настройки → Видео → Режим отображения → «Полноэкранный в окне».",
+    "Нужно нажимать кнопки оверлея? Alt+Shift+M (режим перемещения) или Оверлей → Кнопки на оверлее → «При наведении». Переключить быстро: Alt+Shift+U.",
+    "Бинды работают в любом режиме, даже в эксклюзивном полноэкранном."
+   ]
+  },
+  {
+   "icon": "keyboard",
+   "title": "Бинды",
+   "intro": "Глобальные: работают, даже когда открыта игра.",
+   "steps": [
+    "Вкладка «Клавиши»: нажми на сочетание и зажми новое. Esc — отмена, Backspace — убрать.",
+    "Оранжевым подсвечены сочетания, которые заняты другой программой.",
+    "Если Alt+Shift переключает раскладку — поменяй в Windows раскладку на Win+Пробел или назначь Moa на Ctrl+Alt+…."
+   ]
+  },
+  {
+   "icon": "puzzle",
+   "title": "Расширение браузера (необязательно)",
+   "intro": "Нужно только для режима «Расширение браузера»: YouTube Music напрямую из вкладки.",
+   "steps": [
+    "Chrome, Edge, Яндекс, Opera, Brave: Настройки → «Расширение браузера» → кнопка с папкой. В браузере открой chrome://extensions, включи «Режим разработчика», «Загрузить распакованное» → выбери папку.",
+    "Firefox, Zen: скачай Moa-Connector-firefox.xpi из релиза. В about:config поставь xpinstall.signatures.required = false. В about:addons → ⚙ → «Установить дополнение из файла».",
+    "Firefox, Zen: в about:addons → Moa Connector → Разрешения → включи доступ к music.youtube.com.",
+    "Обнови вкладку YouTube Music (F5)."
+   ]
+  },
+  {
+   "icon": "info",
+   "title": "Если что-то не так",
+   "intro": "Чаще всего помогает одно из этого.",
+   "steps": [
+    "Нет трека: проверь медиа-панель Windows (клавиша громкости) — трек должен быть там.",
+    "Не работает громкость: открой микшер громкости Windows — у плеера должен быть свой ползунок.",
+    "Оверлей пропал: Alt+Shift+O, либо Оверлей → «Сбросить».",
+    "Настройки → «Отчёт для поддержки» копирует отчёт. Отправь его в issue на GitHub — так проще всего починить."
+   ]
+  },
+  {
+   "icon": "cpu",
+   "title": "Память и скорость",
+   "intro": "Moa написана на Rust и рисует всё сама — без браузерного движка.",
+   "steps": [
+    "Обычно Moa занимает 20–40 МБ памяти.",
+    "Окно Moa выгружается из памяти, когда его закрываешь.",
+    "«Плеер в Moa» использует WebView2 и добавляет ~150–300 МБ, пока открыт.",
+    "Аппаратное ускорение по умолчанию выключено: так меньше памяти, а подсветке хватает процессора."
+   ]
+  }
+ ],
+ "en": [
+  {
+   "icon": "sparkles",
+   "title": "Quick start",
+   "intro": "Moa sees music from any player on your PC. Nothing to install.",
+   "steps": [
+    "Play music anywhere: a website in your browser or an app (Spotify, Yandex Music…). The Home tab has buttons that open each service in your browser.",
+    "Sign in there as usual and press play.",
+    "The track appears on Home and in the overlay in the top-left corner. Done.",
+    "Move the overlay: Alt+Shift+M, drag it, drag its corner to resize, ✓ to finish."
+   ]
+  },
+  {
+   "icon": "googlechrome",
+   "title": "Chrome, Edge, Yandex Browser, Opera, Brave, Vivaldi",
+   "intro": "Work out of the box: these browsers publish the track to the Windows media flyout.",
+   "steps": [
+    "Open a music site and play a song.",
+    "If Moa says “Nothing playing”, press a volume key: the Windows flyout should show the browser's track.",
+    "If it doesn't, open chrome://flags (edge://flags in Edge), find “Hardware Media Key Handling”, set it to Enabled and restart the browser.",
+    "Volume in Moa moves the browser's slider in the Windows mixer, not the system volume."
+   ]
+  },
+  {
+   "icon": "zenbrowser",
+   "title": "Firefox, Zen, LibreWolf, Floorp",
+   "intro": "Also work out of the box when Windows media controls are on.",
+   "steps": [
+    "Open a music site and play a song.",
+    "If Moa doesn't see it: open about:config and accept the warning.",
+    "Find media.hardwaremediakeys.enabled and set it to true (double-click).",
+    "Restart the browser and play again."
+   ]
+  },
+  {
+   "icon": "music",
+   "title": "Yandex Music",
+   "intro": "Three ways — pick any.",
+   "steps": [
+    "The Yandex Music app: just listen, Moa picks it up.",
+    "music.yandex.ru in any browser: open it, sign in, play My Vibe.",
+    "No browser: Settings → Music source → “Player in Moa” → Yandex Music → “Open player”. Sign in right in that window; it remembers you, and My Vibe, playlists and likes are all there.",
+    "Closing the player window keeps the music playing. To free its memory, pick another source."
+   ]
+  },
+  {
+   "icon": "spotify",
+   "title": "Spotify and account sign-in",
+   "intro": "Moa sees the Spotify app and website on its own. Connecting your account shows your profile and playlists in Moa and starts them in Spotify.",
+   "steps": [
+    "Open developer.spotify.com/dashboard and sign in with your Spotify account.",
+    "Click “Create app”. Any name and description, e.g. Moa.",
+    "In Redirect URI enter exactly: http://127.0.0.1:47825/callback and click Add.",
+    "Tick Web API, accept the terms and save.",
+    "Open the app → Settings → copy the Client ID.",
+    "In Moa: Settings → Spotify → paste the Client ID → “Sign in with Spotify”.",
+    "Your browser opens: click “Agree”. Back in Moa, the account is connected.",
+    "Starting playlists from Moa needs Spotify Premium and the Spotify app running."
+   ]
+  },
+  {
+   "icon": "youtubemusic",
+   "title": "YouTube Music",
+   "intro": "Listen in your browser; Moa picks it up. Google blocks sign-in inside app windows, so the browser it is.",
+   "steps": [
+    "Open music.youtube.com in your browser, sign in, play.",
+    "Want exact repeat and a glow from the music only (not game sounds)? Install the Moa Connector extension — see “Browser extension”.",
+    "The Player in Moa works for YouTube Music only without an account."
+   ]
+  },
+  {
+   "icon": "soundcloud",
+   "title": "SoundCloud, VK Music, Apple Music, Deezer, TIDAL",
+   "intro": "Work through your browser or their apps.",
+   "steps": [
+    "Open the service (buttons on Home) and sign in.",
+    "Play music — Moa shows the track.",
+    "SoundCloud and VK Music also work in the “Player in Moa” (Settings → Music source).",
+    "Repeat works only if the service lets other apps control it."
+   ]
+  },
+  {
+   "icon": "monitor",
+   "title": "Overlay in games",
+   "intro": "By default the overlay is locked: clicks go straight through it into the game.",
+   "steps": [
+    "Set the game to “Borderless window” or “Windowed fullscreen”. In exclusive fullscreen Windows lets no app draw over the game.",
+    "Dota 2: Settings → Video → Display Mode → Borderless Window.",
+    "CS2: Settings → Video → Display Mode → Fullscreen Windowed.",
+    "Need the overlay's buttons? Alt+Shift+M (move mode) or Overlay → Overlay buttons → “On hover”. Quick toggle: Alt+Shift+U.",
+    "Hotkeys work in every mode, even exclusive fullscreen."
+   ]
+  },
+  {
+   "icon": "keyboard",
+   "title": "Hotkeys",
+   "intro": "Global: they work even while a game is focused.",
+   "steps": [
+    "Keys tab: click a shortcut and press new keys. Esc cancels, Backspace clears.",
+    "Shortcuts taken by another app are highlighted orange.",
+    "If Alt+Shift switches your keyboard layout, change the layout shortcut to Win+Space, or bind Moa to Ctrl+Alt+…."
+   ]
+  },
+  {
+   "icon": "puzzle",
+   "title": "Browser extension (optional)",
+   "intro": "Only needed for the “Browser extension” source: YouTube Music straight from the tab.",
+   "steps": [
+    "Chrome, Edge, Yandex, Opera, Brave: Settings → “Browser extension” → folder button. In the browser open chrome://extensions, turn on Developer mode, “Load unpacked” → pick the folder.",
+    "Firefox, Zen: download Moa-Connector-firefox.xpi from the release. In about:config set xpinstall.signatures.required to false. In about:addons → ⚙ → “Install Add-on From File”.",
+    "Firefox, Zen: about:addons → Moa Connector → Permissions → allow music.youtube.com.",
+    "Reload the YouTube Music tab (F5)."
+   ]
+  },
+  {
+   "icon": "info",
+   "title": "Troubleshooting",
+   "intro": "One of these usually helps.",
+   "steps": [
+    "No track: check the Windows media flyout (press a volume key) — the track must be there.",
+    "Volume does nothing: open the Windows volume mixer — the player should have its own slider.",
+    "Overlay gone: Alt+Shift+O, or Overlay → “Reset”.",
+    "Settings → “Report for support” copies a report. Attach it to a GitHub issue — that's the fastest way to a fix."
+   ]
+  },
+  {
+   "icon": "cpu",
+   "title": "Memory and speed",
+   "intro": "Moa is written in Rust and draws everything itself — no browser engine.",
+   "steps": [
+    "Moa usually uses 20–40 MB of RAM.",
+    "The Moa window is unloaded from memory when you close it.",
+    "The “Player in Moa” uses WebView2 and adds ~150–300 MB while it is open.",
+    "Hardware acceleration is off by default: less memory, and the CPU easily handles the glow."
+   ]
+  }
+ ]
+}
