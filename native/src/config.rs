@@ -146,7 +146,7 @@ impl Config {
         base.unwrap_or_else(std::env::temp_dir).join("Moa")
     }
 
-    fn file() -> PathBuf {
+    pub fn file() -> PathBuf {
         std::env::var_os("MOA_CONFIG").map(PathBuf::from).unwrap_or_else(|| Self::dir().join("config.json"))
     }
 

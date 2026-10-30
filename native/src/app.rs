@@ -7,7 +7,7 @@ use crate::hotkeys::Hotkeys;
 use crate::i18n::I18n as Strings;
 use crate::media::{self, AudioFrame, Backend, Event, TrackState};
 use crate::platform::{self, Rect};
-use crate::{AppWindow, Cfg, GuideItem, HotkeyRow, Overlay};
+use crate::{AppWindow, Cfg, HotkeyRow, Overlay};
 use slint::winit_030::WinitWindowAccessor;
 use slint::{ComponentHandle, Image, ModelRc, PhysicalPosition, SharedString, Timer, TimerMode, VecModel};
 use std::cell::{Cell, RefCell};
@@ -691,13 +691,13 @@ impl App {
         e.playing || !self.sys_state.borrow().as_ref().map(|s| s.playing).unwrap_or(false)
     }
 
-    fn sync_state(self: &Rc<Self>) {
+    pub fn sync_state(self: &Rc<Self>) {
         let s = if self.via_extension() {
             self.ext_state.borrow().clone()
         } else if self.source() == "system" {
             self.sys_state.borrow().clone()
         } else {
-            None
+            crate::player::state()
         };
         self.apply_state(s.unwrap_or_default());
     }
@@ -816,10 +816,18 @@ impl App {
             );
             return;
         }
-        crate::player::cmd(name, arg);
-        if let Some(d) = done {
-            d(None);
-        }
+        let id = self.next_pending(done);
+        crate::player::cmd(
+            name,
+            arg,
+            Box::new(move |v| {
+                post(move |app| {
+                    if let Some(f) = app.pending.borrow_mut().remove(&id) {
+                        f(v);
+                    }
+                })
+            }),
+        );
     }
 
     fn next_pending(&self, f: Option<Box<dyn FnOnce(Option<serde_json::Value>)>>) -> u64 {
@@ -943,7 +951,11 @@ impl App {
                 self.push_app();
             }
             "showApp" => self.toggle_app_window(),
-            "openPlayer" => crate::player::open(&self.cfg.borrow().general.service),
+            "openPlayer" => {
+                let service = self.cfg.borrow().general.service.clone();
+                crate::player::open(&service);
+                self.push_app();
+            }
             "resetHotkeys" => {
                 let mut c = self.cfg.borrow_mut();
                 for (a, k) in ACTIONS {
@@ -1117,7 +1129,13 @@ impl App {
             "general" => match field {
                 "language" | "gpu" => self.restart_note.set(true),
                 "autostart" => platform::set_autostart(v.as_bool().unwrap_or(false)),
-                "source" => self.sync_state(),
+                "source" => {
+                    if self.source() != "player" {
+                        crate::player::close();
+                    }
+                    self.sync_state();
+                    self.push_app();
+                }
                 "service" => crate::player::switch(v.as_str().unwrap_or("yandex")),
                 _ => {}
             },

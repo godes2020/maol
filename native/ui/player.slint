@@ -1,0 +1,13 @@
+// The built-in player: an empty window the WebView2 view fills.
+export component PlayerWindow inherits Window {
+    title: "Moa";
+    icon: @image-url("../../assets/icon.png");
+    background: #030303;
+    preferred-width: 1100px;
+    preferred-height: 720px;
+    min-width: 480px;
+    min-height: 360px;
+    callback resized(length, length);
+    changed width => { root.resized(self.width, self.height); }
+    changed height => { root.resized(self.width, self.height); }
+}
