@@ -16,14 +16,39 @@
   </header>
 
   <nav id="tabs">
-    <button data-tab="hotkeys" class="active" data-i18n="settings.hotkeys"></button>
+    <button data-tab="connect" class="active" data-i18n="settings.connect"></button>
+    <button data-tab="hotkeys" data-i18n="settings.hotkeys"></button>
     <button data-tab="overlay" data-i18n="settings.overlay"></button>
     <button data-tab="playback" data-i18n="settings.playback"></button>
     <button data-tab="general" data-i18n="settings.general"></button>
   </nav>
 
   <main>
-    <section id="tab-hotkeys" class="tab active">
+    <section id="tab-connect" class="tab active">
+      <label class="row select stack">
+        <span class="text"><b data-i18n="settings.source"></b><small data-i18n="settings.source.desc"></small></span>
+        <select data-path="general.source">
+          <option value="browser" data-i18n="settings.sourceBrowser"></option>
+          <option value="app" data-i18n="settings.sourceApp"></option>
+        </select>
+      </label>
+
+      <div id="browserMode">
+        <div id="status" class="status"><span class="dot"></span><span id="statusText"></span></div>
+        <ol class="steps">
+          <li><span data-i18n="settings.step1"></span> <button id="openExtFolder" class="ghost small" data-i18n="settings.step1Btn"></button>
+            <code id="extDir" class="path"></code></li>
+          <li id="step2"></li>
+          <li><span data-i18n="settings.step3"></span> <button id="openYtm" class="ghost small" data-i18n="settings.step3Btn"></button></li>
+        </ol>
+        <p class="hint" data-i18n="settings.stepDone"></p>
+        <p><a href="#" id="openGuide" data-i18n="settings.guide"></a></p>
+      </div>
+
+      <div id="appMode" class="msg" data-i18n="settings.appNote"></div>
+    </section>
+
+    <section id="tab-hotkeys" class="tab">
       <p class="hint" data-i18n="settings.hotkeysHint"></p>
       <div id="hotkeyMsg" class="msg" hidden></div>
       <div id="hotkeyList" class="list"></div>
@@ -31,27 +56,42 @@
     </section>
 
     <section id="tab-overlay" class="tab">
-      <label class="row switch"><span data-i18n="settings.overlayVisible"></span><input type="checkbox" data-path="overlay.visible"><i></i></label>
-      <label class="row switch"><span data-i18n="settings.overlayAlwaysExpanded"></span><input type="checkbox" data-path="overlay.alwaysExpanded"><i></i></label>
-      <label class="row switch"><span data-i18n="settings.overlayHideWhenIdle"></span><input type="checkbox" data-path="overlay.hideWhenIdle"><i></i></label>
-      <label class="row switch"><span data-i18n="settings.overlayReactive"></span><input type="checkbox" data-path="overlay.reactive"><i></i></label>
-      <label class="row range"><span data-i18n="settings.overlayIntensity"></span><input type="range" min="0.2" max="2" step="0.1" data-path="overlay.intensity"><output></output></label>
-      <label class="row range"><span data-i18n="settings.overlayOpacity"></span><input type="range" min="0.3" max="1" step="0.05" data-path="overlay.opacity" data-format="percent"><output></output></label>
-      <label class="row range"><span data-i18n="settings.overlayScale"></span><input type="range" min="0.7" max="1.6" step="0.05" data-path="overlay.scale" data-format="percent"><output></output></label>
-      <div class="buttons">
-        <button id="moveOverlay" data-i18n="settings.overlayMove"></button>
-        <button id="resetOverlay" class="ghost" data-i18n="settings.overlayReset"></button>
+      <label class="row switch"><span class="text"><b data-i18n="settings.overlayVisible"></b><small data-i18n="settings.overlayVisible.desc"></small></span><input type="checkbox" data-path="overlay.visible"><i></i></label>
+      <label class="row select stack"><span class="text"><b data-i18n="settings.overlayLayout"></b><small data-i18n="settings.overlayLayout.desc"></small></span>
+        <select data-path="overlay.layout">
+          <option value="card" data-i18n="settings.layoutCard"></option>
+          <option value="cover" data-i18n="settings.layoutCover"></option>
+        </select>
+      </label>
+      <label class="row select stack"><span class="text"><b data-i18n="settings.overlayInteraction"></b><small data-i18n="settings.overlayInteraction.desc"></small></span>
+        <select data-path="overlay.interaction">
+          <option value="locked" data-i18n="settings.interactionLocked"></option>
+          <option value="hover" data-i18n="settings.interactionHover"></option>
+        </select>
+      </label>
+      <label class="row switch"><span class="text"><b data-i18n="settings.overlayAlwaysExpanded"></b><small data-i18n="settings.overlayAlwaysExpanded.desc"></small></span><input type="checkbox" data-path="overlay.alwaysExpanded"><i></i></label>
+      <label class="row switch"><span class="text"><b data-i18n="settings.overlayHideWhenIdle"></b><small data-i18n="settings.overlayHideWhenIdle.desc"></small></span><input type="checkbox" data-path="overlay.hideWhenIdle"><i></i></label>
+      <label class="row switch"><span class="text"><b data-i18n="settings.overlayReactive"></b><small data-i18n="settings.overlayReactive.desc"></small></span><input type="checkbox" data-path="overlay.reactive"><i></i></label>
+      <label class="row range"><span class="text"><b data-i18n="settings.overlayIntensity"></b><small data-i18n="settings.overlayIntensity.desc"></small></span><input type="range" min="0.2" max="2" step="0.1" data-path="overlay.intensity"><output></output></label>
+      <label class="row range"><span class="text"><b data-i18n="settings.overlayOpacity"></b><small data-i18n="settings.overlayOpacity.desc"></small></span><input type="range" min="0.3" max="1" step="0.05" data-path="overlay.opacity" data-format="percent"><output></output></label>
+      <label class="row range"><span class="text"><b data-i18n="settings.overlayScale"></b><small data-i18n="settings.overlayScale.desc"></small></span><input type="range" min="0.7" max="1.6" step="0.05" data-path="overlay.scale" data-format="percent"><output></output></label>
+      <div class="row stack">
+        <span class="text"><b data-i18n="settings.overlayMove"></b><small data-i18n="settings.overlayMove.desc"></small></span>
+        <div class="buttons">
+          <button id="moveOverlay" data-i18n="settings.overlayMove"></button>
+          <button id="resetOverlay" class="ghost" data-i18n="settings.overlayReset"></button>
+        </div>
       </div>
+      <div class="note"><b data-i18n="settings.fullscreenTitle"></b><p data-i18n="settings.fullscreenNote"></p></div>
     </section>
 
     <section id="tab-playback" class="tab">
-      <label class="row range"><span data-i18n="settings.seekStep"></span><input type="range" min="1" max="30" step="1" data-path="playback.seekStep"><output></output></label>
-      <label class="row range"><span data-i18n="settings.volumeStep"></span><input type="range" min="1" max="20" step="1" data-path="playback.volumeStep"><output></output></label>
+      <label class="row range"><span class="text"><b data-i18n="settings.seekStep"></b><small data-i18n="settings.seekStep.desc"></small></span><input type="range" min="1" max="30" step="1" data-path="playback.seekStep"><output></output></label>
+      <label class="row range"><span class="text"><b data-i18n="settings.volumeStep"></b><small data-i18n="settings.volumeStep.desc"></small></span><input type="range" min="1" max="20" step="1" data-path="playback.volumeStep"><output></output></label>
     </section>
 
     <section id="tab-general" class="tab">
-      <label class="row select">
-        <span data-i18n="settings.language"></span>
+      <label class="row select stack"><span class="text"><b data-i18n="settings.language"></b><small data-i18n="settings.language.desc"></small></span>
         <select data-path="general.language">
           <option value="auto" data-i18n="settings.languageAuto"></option>
           <option value="en">English</option>
@@ -59,9 +99,9 @@
         </select>
       </label>
       <p class="hint small" data-i18n="settings.restartNote"></p>
-      <label class="row switch"><span data-i18n="settings.autostart"></span><input type="checkbox" data-path="general.autostart"><i></i></label>
-      <label class="row switch"><span data-i18n="settings.closeToTray"></span><input type="checkbox" data-path="general.closeToTray"><i></i></label>
-      <label class="row switch"><span data-i18n="settings.startHidden"></span><input type="checkbox" data-path="general.startHidden"><i></i></label>
+      <label class="row switch"><span class="text"><b data-i18n="settings.autostart"></b><small data-i18n="settings.autostart.desc"></small></span><input type="checkbox" data-path="general.autostart"><i></i></label>
+      <label class="row switch"><span class="text"><b data-i18n="settings.closeToTray"></b><small data-i18n="settings.closeToTray.desc"></small></span><input type="checkbox" data-path="general.closeToTray"><i></i></label>
+      <label class="row switch"><span class="text"><b data-i18n="settings.showWindow"></b><small data-i18n="settings.showWindow.desc"></small></span><input type="checkbox" data-path="general.showWindow"><i></i></label>
       <p class="footer"><a href="https://github.com/godes2020/maol" target="_blank">github.com/godes2020/maol</a></p>
     </section>
   </main>

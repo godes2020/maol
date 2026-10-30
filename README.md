@@ -2,7 +2,7 @@
 
 <img src="docs/media/banner.png" alt="Moa — Music Overlay App" width="100%">
 
-**YouTube Music on your desktop, plus a compact, music-reactive overlay that stays on top of your games.<br>Control everything with global hotkeys without leaving the game.**
+**A music-reactive overlay for YouTube Music that sits on top of your games.<br>Control playback with global hotkeys without leaving the game.**
 
 [![Release](https://img.shields.io/github/v/release/godes2020/maol?style=for-the-badge&color=a855f7&label=release)](https://github.com/godes2020/maol/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/godes2020/maol/total?style=for-the-badge&color=ec4899)](https://github.com/godes2020/maol/releases)
@@ -25,33 +25,33 @@
 
 |   |   |
 |---|---|
-| 🎵 **Full YouTube Music** | Sign in to your Google account and use playlists, your library, recommendations, search and radio, all inside one compact window. |
-| 🪟 **In-game overlay** | A small player that floats on top of every window, like the Discord overlay. Mouse clicks pass straight through it to your game. |
-| 💿 **Progress ring** | A square cover whose border fills up as the track plays. |
-| 🌈 **Music-reactive background** | The card picks its colours from the cover art, pulses on the bass, flashes on beats and follows the track's tempo. |
-| 🖱 **Hover to expand** | Hover the overlay to get a seek bar, time, previous/next, repeat, mute and more. |
+| 🎵 **Your YouTube Music** | Music plays in your usual browser (Chrome, Edge, Yandex, Opera, Brave), so Google sign-in, playlists, your library and recommendations all work. The small **Moa Connector** extension links the browser tab to Moa. |
+| 🪟 **In-game overlay** | A small player floats on top of every window, like the Discord overlay. Moa has no window of its own, just the overlay and a tray icon. |
+| 🖱 **Never in the way** | By default the overlay is **locked**: every click goes straight through it to your game. You can click on it freely in Dota 2 or CS2. The buttons only work in move mode, or switch it to “opens on hover”. |
+| 💿 **Two styles** | **Card** shows the cover, title and artist. **Cover only** shows just the cover with its progress ring and beat glow, and unfolds into the full player when needed. |
+| 🌈 **Smooth beat glow** | Colours come from the cover. The glow, ring and background softly breathe with the bass and the beat, with no flicker. |
 | ⌨️ **Global hotkeys** | Play/pause, next/previous, seek, volume, mute and repeat work everywhere, even in a fullscreen game. You can rebind every one. |
-| 🧲 **Move it anywhere** | Press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd>, drag the overlay where you want it, and press the same keys again. Moa remembers the spot. |
-| 🌍 **English & Russian** | The interface follows your system language. You can switch it in the settings. |
+| 🧲 **Move it anywhere** | Press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd>, drag the overlay, and press the same keys again. |
+| 🌍 **English & Russian** | Every setting has a short explanation in both languages. |
 
 <div align="center">
-<img src="docs/media/overlay-demo.gif" alt="Overlay demo: compact, hover, volume, mute" width="420">
-<br><sub>Compact → hover → volume change → mute</sub>
+<img src="docs/media/overlay-demo.gif" alt="Card overlay: compact, expanded, volume, mute" width="400">
+<img src="docs/media/overlay-cover-demo.gif" alt="Cover-only overlay unfolding into the full player" width="400">
+<br><sub>Card style · Cover-only style</sub>
 </div>
 
 ## ⬇ Download & install
 
-1. Open the [**latest release**](https://github.com/godes2020/maol/releases/latest).
-2. Download **`Moa-Setup-x.y.z.exe`** (installer) or **`Moa-x.y.z-portable.exe`** (no installation).
-3. Run it. Windows may show **“Windows protected your PC”** because the app is not code-signed yet. Click **More info → Run anyway**.
-4. Moa opens in a small window. Click **Sign in** (top-right) and log in to your Google account.
-5. Pick a song and the overlay shows up in the top-left corner of your screen. 🎉
+1. Download **`Moa-Setup-x.y.z.exe`** from the [**latest release**](https://github.com/godes2020/maol/releases/latest) and run it. If Windows says *“Windows protected your PC”*, click **More info → Run anyway**. The app isn't code-signed yet.
+2. Moa starts in the tray and opens **Settings → Connection**.
+3. Click **Open folder**. In your browser, open `chrome://extensions` (or `edge://extensions`), turn on **Developer mode**, click **Load unpacked** and select that folder.
+4. Open [music.youtube.com](https://music.youtube.com) in the browser, sign in and play a song. The overlay appears in the top-left corner. 🎉
 
-> 📖 The [step-by-step install guide](docs/INSTALL.md) has screenshots, an update guide, uninstall steps and troubleshooting.
+> 📖 The [step-by-step install guide](docs/INSTALL.md) covers every step with pictures, plus updating, uninstalling and troubleshooting.
 
 ## ⌨ Hotkeys
 
-The default hotkeys are listed below. You can change any of them in **Settings → Hotkeys**: click a shortcut and press a new combination.
+Change any of them in **Settings → Hotkeys**: click a shortcut and press a new combination.
 
 | Action | Default |
 |---|---|
@@ -65,73 +65,87 @@ The default hotkeys are listed below. You can change any of them in **Settings �
 | Repeat: off → playlist → track | <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> |
 | Show / hide overlay | <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd> |
 | **Move overlay (edit mode)** | <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> |
-| Show / hide the Moa window | <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd> |
+| **Lock / unlock overlay** (click-through ↔ opens on hover) | <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>U</kbd> |
+| Show the player (YouTube Music tab) | <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd> |
 | Open settings | *not set* |
 
-> 💡 <kbd>J</kbd> / <kbd>K</kbd> / <kbd>L</kbd> mean back / pause / forward, the same as on YouTube. The seek step and volume step are adjustable in **Settings → Playback**.
+> 💡 <kbd>J</kbd> / <kbd>K</kbd> / <kbd>L</kbd> mean back / pause / forward, the same as on YouTube.
 
 ## 🪟 The overlay
 
 <table>
 <tr>
-<td align="center" width="50%"><img src="docs/media/overlay-compact.png" width="300"><br><b>Compact</b><br><sub>Cover with progress ring, title, artist and a live equalizer that doubles as a mute button.</sub></td>
-<td align="center" width="50%"><img src="docs/media/overlay-expanded.png" width="300"><br><b>On hover</b><br><sub>Seek bar, play/pause, previous/next, repeat, open Moa and hide overlay buttons.</sub></td>
+<td align="center" width="50%"><img src="docs/media/overlay-compact.png" width="300"><br><b>Card</b><br><sub>Cover with progress ring, title, artist and a live equalizer.</sub></td>
+<td align="center" width="50%"><img src="docs/media/overlay-cover.png" width="300"><br><b>Cover only</b><br><sub>Just the cover, the ring and a glow that breathes with the beat.</sub></td>
 </tr>
 <tr>
-<td align="center"><img src="docs/media/overlay-edit.png" width="300"><br><b>Edit mode</b> (<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd>)<br><sub>Drag the overlay anywhere and press the hotkey again to lock it.</sub></td>
-<td align="center"><img src="docs/media/overlay-muted.png" width="300"><br><b>Muted</b><br><sub>The equalizer flattens and gets crossed out.</sub></td>
+<td align="center"><img src="docs/media/overlay-expanded.png" width="300"><br><b>Full player</b><br><sub>Seek bar, play/pause, previous/next, repeat, mute and the open-player and hide buttons.</sub></td>
+<td align="center"><img src="docs/media/overlay-edit.png" width="300"><br><b>Move mode</b> (<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd>)<br><sub>Drag it anywhere and press the buttons. Press the hotkey again to lock it.</sub></td>
 </tr>
 </table>
 
-**How the background reacts.** Moa reads the audio that YouTube Music plays through the Web Audio API, entirely on your PC. The bass makes the cover, glow and blurred background pulse, and detected beats trigger a soft flash. The drift animation speeds up or slows down to match the estimated BPM. You can turn this off or change its intensity in **Settings → Overlay**.
+**Mouse behaviour.** Choose it in **Settings → Overlay**:
+- **Locked** (default, made for games): the overlay is completely transparent to the mouse, so clicks land in the game. Its buttons are available only in move mode.
+- **Opens on hover**: pointing at the overlay unfolds the full player and its buttons can be clicked.
+
+You can switch between the two at any time with <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>U</kbd>.
+
+**How the glow works.** The Moa Connector reads the audio of the YouTube Music tab through the Web Audio API, entirely on your PC. The overlay eases towards the bass level every frame and lights up softly on each beat, then fades out over roughly one beat. That's why the glow breathes instead of flickering.
 
 ## ⚙ Settings
 
-<div align="center"><img src="docs/media/settings-en.png" alt="Settings window" width="420"></div>
+<div align="center">
+<img src="docs/media/settings-connect-en.png" alt="Settings: Connection" width="400">
+<img src="docs/media/settings-overlay-en.png" alt="Settings: Overlay" width="400">
+</div>
 
-To open the settings, right-click the **tray icon** and choose **Settings…**, or press <kbd>Ctrl</kbd>+<kbd>,</kbd> in the Moa window.
+To open the settings, right-click the **tray icon** and choose **Settings…**. Every option has a short explanation right under it.
 
+- **Connection**: music source (browser + extension, or the built-in window), connection status and setup steps.
 - **Hotkeys**: rebind any action, unbind it with <kbd>Backspace</kbd>, or reset everything to the defaults.
-- **Overlay**: show or hide it, always show the full player, hide it when nothing is playing, change opacity and size, turn the reactive background and its intensity on or off, and move or reset the overlay position.
-- **Playback**: seek step (1–30 s) and volume step (1–20 %).
-- **General**: language, launch with Windows, keep running in the tray when the window is closed, start minimized.
+- **Overlay**: style (card or cover only), mouse behaviour (locked or opens on hover), always show the full player, hide when idle, beat glow and its strength, opacity, size, position.
+- **Playback**: seek step and volume step.
+- **General**: language, launch with Windows, tray behaviour, and whether to show the Moa window (off by default).
 
 ## ❓ FAQ
 
 <details>
-<summary><b>The overlay isn't visible in my game</b></summary>
+<summary><b>Does the overlay work in fullscreen games (Dota 2, CS2…)?</b></summary>
 
-Moa draws a normal always-on-top window, so it shows over games running in **Windowed** or **Borderless / Fullscreen windowed** mode. In **exclusive fullscreen** the game takes over the screen and no regular window can be drawn on top. The only way around that is injecting code into the game, which anti-cheat systems can punish. Switch the game to *Borderless*. Hotkeys keep working in any mode.
+Yes, in **Borderless window** or **Windowed / Desktop-friendly fullscreen** mode, which looks exactly like fullscreen. In **exclusive fullscreen** Windows does not let any app draw over the game. Only injecting code into the game could, and anti-cheat systems ban for that, so Moa doesn't. In Dota 2 go to *Settings → Video → Display Mode* and pick *Borderless Window* or *Desktop-Friendly Fullscreen*. Hotkeys work in every mode.
+</details>
+
+<details>
+<summary><b>Why does the music play in my browser and not in Moa?</b></summary>
+
+Google blocks signing in from windows built into apps (*“This browser or app may not be secure”*). That's a deliberate Google security rule, and Moa respects it instead of trying to trick it. In your real browser, sign-in works normally, and the Moa Connector extension passes the track, the progress, the audio for the glow and your hotkey commands between the tab and Moa. If you don't need an account, you can switch to the **built-in window** in *Settings → Connection*.
+</details>
+
+<details>
+<summary><b>The overlay says “Nothing playing”</b></summary>
+
+Check three things:
+- Moa is running (look for the tray icon).
+- The extension is enabled. Its popup shows a green dot next to **Connected to Moa**.
+- A YouTube Music tab is open. If the tab was open before you installed the extension, reload it with <kbd>F5</kbd>.
 </details>
 
 <details>
 <summary><b>A hotkey doesn't work</b></summary>
 
-Another app (or the game itself) may already use that combination. Open **Settings → Hotkeys**. Any shortcut Moa couldn't register is highlighted in orange. Pick a different combination.
+Another app or the game may already use that combination. In **Settings → Hotkeys**, any shortcut Moa couldn't register is highlighted in orange. Pick a different combination.
 </details>
 
 <details>
 <summary><b>Pressing Alt+Shift switches my keyboard layout</b></summary>
 
-On Windows, pressing and releasing <kbd>Alt</kbd>+<kbd>Shift</kbd> on their own switches the layout. Combinations with a third key, like the ones Moa uses, normally don't. If it still bothers you, either rebind Moa's hotkeys to <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+… or change the layout switch to <kbd>Win</kbd>+<kbd>Space</kbd> in Windows settings.
+Windows switches the layout when <kbd>Alt</kbd>+<kbd>Shift</kbd> are pressed and released without a third key. Moa's combinations normally don't trigger it. If they do, rebind Moa to <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+… or change the layout shortcut to <kbd>Win</kbd>+<kbd>Space</kbd>.
 </details>
 
 <details>
-<summary><b>Google says “This browser or app may not be secure”</b></summary>
+<summary><b>Is my data sent anywhere?</b></summary>
 
-Moa presents itself as a regular Chrome browser, so this is rare. If you see it, close the window, wait a minute and try again, or sign in once with a different method (for example, a security key or phone prompt).
-</details>
-
-<details>
-<summary><b>Where are my settings stored? Is my data sent anywhere?</b></summary>
-
-Settings are stored in `%APPDATA%\Moa\config.json`. Your YouTube/Google session is stored in the same folder and works exactly like it would in a browser. Moa has no servers, no analytics and no telemetry. The only connections it makes are to YouTube Music and Google.
-</details>
-
-<details>
-<summary><b>How do I close Moa completely?</b></summary>
-
-Closing the window keeps Moa in the tray so music and hotkeys keep working. To exit, right-click the tray icon and choose **Quit**. You can turn this behaviour off in **Settings → General**.
+No. Moa and the extension talk only to each other, over a local connection (`127.0.0.1`) that accepts only browser extensions. There are no servers, no analytics and no telemetry. Settings are stored in `%APPDATA%\Moa\config.json`.
 </details>
 
 ## 🛠 Build from source
@@ -152,31 +166,31 @@ npm install
 npm start
 ```
 
-To build the Windows installer, run `npm run dist`. It writes `dist/Moa-Setup-x.y.z.exe` and a portable exe.
+To build the Windows installer, run `npm run dist`. To regenerate the README images and GIFs, run `npm run media`.
 
 <details>
 <summary>Project structure</summary>
 
 ```
 src/
-├── main/        # Electron main process: windows, tray, hotkeys, config
-├── inject/      # Script injected into music.youtube.com (player state, audio analysis, commands)
+├── main/        # Electron main process: windows, tray, hotkeys, config, local connector server
 ├── preload/     # Secure bridges between pages and the main process
 ├── overlay/     # The overlay UI (HTML/CSS/JS)
 ├── settings/    # The settings window
 └── shared/      # i18n strings (EN/RU)
-scripts/         # check.js (syntax check), capture-media.js (README images/GIF)
+extension/       # Moa Connector browser extension (also holds ytm-bridge.js, shared with the built-in window)
+scripts/         # check.js (syntax check), capture-media.js (README images/GIFs)
 ```
 </details>
 
-Releases are built automatically. Pushing a tag like `v0.1.0` makes [GitHub Actions](.github/workflows/release.yml) build the installer and publish it to Releases.
+Releases are built by [GitHub Actions](.github/workflows/release.yml): run the **Release** workflow with *publish* ticked, or push a `v*` tag.
 
 ## 🗺 Roadmap
 
+- [ ] Publish Moa Connector to the Chrome Web Store (one-click install)
+- [ ] Firefox support
 - [ ] Spotify and Yandex Music support
-- [ ] Like / dislike from the overlay
-- [ ] Lyrics in the overlay
-- [ ] More overlay themes and layouts
+- [ ] Like / dislike and lyrics in the overlay
 - [ ] macOS and Linux builds
 
 ## 📄 License

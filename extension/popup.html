@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { margin: 0; width: 260px; padding: 14px 16px; background: #0d0b14; color: #f1eefa;
+      font: 13px/1.45 "Segoe UI", system-ui, sans-serif; }
+    header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    header img { width: 32px; height: 32px; border-radius: 8px; }
+    h1 { margin: 0; font-size: 15px; }
+    .row { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #6b6480; }
+    .ok .dot { background: #34d399; box-shadow: 0 0 8px #34d399; }
+    .bad .dot { background: #f87171; }
+    p { color: #9a93b3; margin: 8px 0 0; font-size: 12px; }
+    a { color: #c084fc; }
+  </style>
+</head>
+<body>
+  <header><img src="icons/48.png" alt=""><h1>Moa Connector</h1></header>
+  <div class="row" id="moa"><span class="dot"></span><span></span></div>
+  <div class="row" id="ytm"><span class="dot"></span><span></span></div>
+  <p id="hint"></p>
+  <script src="popup.js"></script>
+</body>
+</html>

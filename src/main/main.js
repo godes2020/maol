@@ -10,16 +10,51 @@ const {
   nativeImage,
   net,
   screen,
-  session,
   shell
 } = require('electron');
 const { Config, DEFAULT_HOTKEYS } = require('./config');
+const { Connector } = require('./connector');
 const i18n = require('../shared/i18n');
 
 const YTM_URL = 'https://music.youtube.com/';
 const ROOT = path.join(__dirname, '..', '..');
 const ICON = path.join(ROOT, 'assets', 'icon.png');
 const TRAY_ICON = path.join(ROOT, 'assets', 'tray.png');
+const GUIDE_URL = {
+  en: 'https://github.com/godes2020/maol/blob/HEAD/docs/INSTALL.md#3-connect-your-browser',
+  ru: 'https://github.com/godes2020/maol/blob/HEAD/docs/INSTALL.ru.md#3-подключи-браузер'
+};
+
+// YouTube's cookie dialog can end up with dark text on a dark background
+// inside the app window; force light, readable text there.
+const CONSENT_PAGE_CSS = `
+  html, body { background: #121212 !important; }
+  body, body * { color: #ececec !important; }
+  a, a * { color: #8ab4f8 !important; }
+  button, [role="button"], input[type="submit"] {
+    background-color: #2d2d2d !important;
+    border: 1px solid #5f6368 !important;
+  }
+`;
+const CONSENT_DIALOG_CSS = `
+  ytd-consent-bump-v2-lightbox, ytmusic-consent-bump, tp-yt-paper-dialog:has([class*="consent"]) {
+    --yt-spec-text-primary: #ececec !important;
+    --yt-spec-text-secondary: #bdbdbd !important;
+  }
+  ytd-consent-bump-v2-lightbox *, ytmusic-consent-bump *, tp-yt-paper-dialog:has([class*="consent"]) * {
+    color: #ececec !important;
+  }
+  ytd-consent-bump-v2-lightbox tp-yt-paper-dialog, ytmusic-consent-bump tp-yt-paper-dialog,
+  tp-yt-paper-dialog:has([class*="consent"]) {
+    background: #212121 !important;
+  }
+  ytd-consent-bump-v2-lightbox button, ytmusic-consent-bump button,
+  tp-yt-paper-dialog:has([class*="consent"]) button {
+    background: #3a3a3a !important;
+    border: 1px solid #5f6368 !important;
+  }
+  ytd-consent-bump-v2-lightbox a, ytmusic-consent-bump a { color: #8ab4f8 !important; }
+`;
 
 // Overlay card size in CSS pixels (before scaling) plus room for the glow.
 const OVERLAY_W = 300;
@@ -46,11 +81,16 @@ let failedHotkeys = [];
 let lastState = null;
 let lastArtUrl = null;
 const artCache = new Map();
+const connector = new Connector();
 
 // ---------------------------------------------------------------------------
 // Windows
 
-function createMainWindow() {
+function isBrowserMode() {
+  return config.get().general.source !== 'app';
+}
+
+function createMainWindow(showOnReady = false) {
   const w = config.get().window;
   mainWin = new BrowserWindow({
     width: w.width,
@@ -73,10 +113,16 @@ function createMainWindow() {
     }
   });
 
-  const bridge = fs.readFileSync(path.join(ROOT, 'src', 'inject', 'ytm-bridge.js'), 'utf8');
+  const bridge = fs.readFileSync(path.join(ROOT, 'extension', 'ytm-bridge.js'), 'utf8');
   mainWin.webContents.on('dom-ready', () => {
-    const host = safeHost(mainWin.webContents.getURL());
-    if (host === 'music.youtube.com') mainWin.webContents.executeJavaScript(bridge).catch(() => {});
+    const wc = mainWin.webContents;
+    const host = safeHost(wc.getURL());
+    if (host === 'music.youtube.com') {
+      wc.executeJavaScript(bridge).catch(() => {});
+      wc.insertCSS(CONSENT_DIALOG_CSS).catch(() => {});
+    } else if (/^consent\.(youtube|google)\.com$/.test(host)) {
+      wc.insertCSS(CONSENT_PAGE_CSS).catch(() => {});
+    }
   });
 
   mainWin.webContents.setWindowOpenHandler(({ url }) => {
@@ -87,8 +133,9 @@ function createMainWindow() {
   });
 
   mainWin.once('ready-to-show', () => {
-    const hidden = config.get().general.startHidden || process.argv.includes('--hidden');
-    if (!hidden) mainWin.show();
+    // Like Discord, Moa lives in the tray by default; the window is opt-in.
+    const show = config.get().general.showWindow && !process.argv.includes('--hidden');
+    if (show || showOnReady) mainWin.show();
   });
 
   const saveBounds = () => {
@@ -100,14 +147,16 @@ function createMainWindow() {
   mainWin.on('moved', saveBounds);
 
   mainWin.on('close', (e) => {
-    if (!quitting && config.get().general.closeToTray) {
+    if (quitting) return;
+    if (config.get().general.closeToTray) {
       e.preventDefault();
       mainWin.hide();
+    } else {
+      quit();
     }
   });
   mainWin.on('closed', () => {
     mainWin = null;
-    if (!quitting) app.quit();
   });
 
   mainWin.loadURL(YTM_URL);
@@ -213,7 +262,7 @@ function setEditMode(on) {
   rebuildTrayMenu();
 }
 
-function createSettingsWindow() {
+function createSettingsWindow(tab) {
   if (settingsWin) {
     settingsWin.show();
     settingsWin.focus();
@@ -245,11 +294,12 @@ function createSettingsWindow() {
     registerHotkeys();
   });
   settingsWin.loadFile(path.join(ROOT, 'src', 'settings', 'settings.html'), {
-    query: { lang: currentLang() }
+    query: { lang: currentLang(), tab: typeof tab === 'string' ? tab : '' }
   });
 }
 
 function toggleMainWindow() {
+  if (isBrowserMode()) return showMainWindow();
   if (!mainWin) return;
   if (mainWin.isVisible() && !mainWin.isMinimized() && mainWin.isFocused()) {
     mainWin.hide();
@@ -258,8 +308,14 @@ function toggleMainWindow() {
   }
 }
 
+// In browser mode "the Moa window" is the YouTube Music tab in the browser.
 function showMainWindow() {
-  if (!mainWin) return;
+  if (isBrowserMode()) {
+    if (connector.connected) connector.cmd('focusPlayer');
+    else shell.openExternal(YTM_URL);
+    return;
+  }
+  if (!mainWin) return createMainWindow(true);
   if (mainWin.isMinimized()) mainWin.restore();
   mainWin.show();
   mainWin.focus();
@@ -273,7 +329,7 @@ function rebuildTrayMenu() {
   const o = config.get().overlay;
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: t('tray.show'), click: showMainWindow },
+      { label: isBrowserMode() ? t('tray.openPlayer') : t('tray.show'), click: showMainWindow },
       { type: 'separator' },
       {
         label: t('tray.overlay'),
@@ -322,6 +378,7 @@ function createAppMenu() {
 // Player commands & hotkeys
 
 function ytm(name, arg) {
+  if (isBrowserMode()) return connector.cmd(name, arg);
   if (!mainWin) return Promise.resolve(null);
   const code = `window.__moa ? window.__moa.cmd(${JSON.stringify(name)}, ${JSON.stringify(arg ?? null)}) : null`;
   return mainWin.webContents.executeJavaScript(code).catch(() => null);
@@ -366,6 +423,13 @@ const actions = {
     rebuildTrayMenu();
   },
   editOverlay: () => setEditMode(!editMode),
+  toggleLock: () => {
+    const interaction = config.get().overlay.interaction === 'locked' ? 'hover' : 'locked';
+    config.patch({ overlay: { interaction } });
+    applyOverlayConfig();
+    pushSettingsInfo();
+    toast(t(interaction === 'locked' ? 'overlay.locked' : 'overlay.unlocked'));
+  },
   showApp: toggleMainWindow,
   openSettings: createSettingsWindow
 };
@@ -417,8 +481,14 @@ async function fetchArt(url) {
   }
 }
 
+function extensionDir() {
+  return app.isPackaged ? path.join(process.resourcesPath, 'extension') : path.join(ROOT, 'extension');
+}
+
 function settingsInfo() {
   return {
+    connector: { connected: connector.connected, version: connector.version, error: connector.error },
+    extensionDir: extensionDir(),
     config: config.get(),
     defaults: DEFAULT_HOTKEYS,
     failed: failedHotkeys,
@@ -428,23 +498,24 @@ function settingsInfo() {
 }
 
 function setupIpc() {
-  ipcMain.on('moa:state', async (e, state) => {
-    if (!mainWin || e.sender !== mainWin.webContents) return;
-    const hadTrack = lastState && lastState.hasTrack;
-    lastState = state;
-    sendOverlay('overlay:state', state);
-    if (Boolean(hadTrack) !== Boolean(state.hasTrack)) updateOverlayVisibility();
-    if (state.artwork !== lastArtUrl) {
-      lastArtUrl = state.artwork;
-      const art = await fetchArt(state.artwork);
-      if (lastArtUrl === state.artwork) sendOverlay('overlay:art', art);
-    }
+  ipcMain.on('moa:state', (e, state) => {
+    if (!isBrowserMode() && mainWin && e.sender === mainWin.webContents) handleState(state);
+  });
+  ipcMain.on('moa:audio', (e, audio) => {
+    if (!isBrowserMode() && mainWin && e.sender === mainWin.webContents) sendOverlay('overlay:audio', audio);
   });
 
-  ipcMain.on('moa:audio', (e, audio) => {
-    if (!mainWin || e.sender !== mainWin.webContents) return;
-    sendOverlay('overlay:audio', audio);
+  connector.on('state', (state) => {
+    if (isBrowserMode()) handleState(state);
   });
+  connector.on('audio', (audio) => {
+    if (isBrowserMode()) sendOverlay('overlay:audio', audio);
+  });
+  connector.on('status', pushSettingsInfo);
+
+  ipcMain.on('settings:open-ytm', () => shell.openExternal(YTM_URL));
+  ipcMain.on('settings:open-extension-folder', () => shell.openPath(extensionDir()));
+  ipcMain.on('settings:open-guide', () => shell.openExternal(GUIDE_URL[currentLang()] || GUIDE_URL.en));
 
   ipcMain.on('moa:command', (_e, name, arg) => runAction(name, arg));
   ipcMain.on('moa:action', (_e, name) => runAction(name));
@@ -459,6 +530,7 @@ function setupIpc() {
 
   ipcMain.on('overlay:interactive', (_e, on) => {
     if (!overlayWin || editMode) return;
+    if (on && config.get().overlay.interaction === 'locked') return;
     overlayWin.setIgnoreMouseEvents(!on, { forward: true });
   });
 
@@ -476,6 +548,7 @@ function setupIpc() {
     if (partial && partial.general) {
       applyAutostart();
       if (c.general.language !== prevLang) config.flush();
+      if ('source' in partial.general) applySource();
     }
     return settingsInfo();
   });
@@ -498,6 +571,34 @@ function setupIpc() {
       overlayWin.setPosition(b.x, b.y);
     }
   });
+}
+
+async function handleState(state) {
+  const hadTrack = lastState && lastState.hasTrack;
+  lastState = state;
+  sendOverlay('overlay:state', state);
+  if (Boolean(hadTrack) !== Boolean(state.hasTrack)) updateOverlayVisibility();
+  if (state.artwork !== lastArtUrl) {
+    lastArtUrl = state.artwork;
+    const art = await fetchArt(state.artwork);
+    if (lastArtUrl === state.artwork) sendOverlay('overlay:art', art);
+  }
+}
+
+function pushSettingsInfo() {
+  if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('settings:info', settingsInfo());
+}
+
+// Switches between the browser extension and the built-in window at runtime.
+function applySource() {
+  handleState({ hasTrack: false, playing: false });
+  if (isBrowserMode()) {
+    if (mainWin) mainWin.destroy();
+  } else if (!mainWin) {
+    createMainWindow(true);
+  }
+  rebuildTrayMenu();
+  pushSettingsInfo();
 }
 
 // ---------------------------------------------------------------------------
@@ -529,11 +630,6 @@ function quit() {
   app.quit();
 }
 
-// Google refuses sign-in from browsers that announce themselves as Electron.
-function cleanUserAgent(ua) {
-  return ua.replace(/\sElectron\/\S+/i, '').replace(/\s(moa|Moa)\/\S+/, '');
-}
-
 app.on('second-instance', showMainWindow);
 
 app.on('before-quit', () => {
@@ -541,7 +637,10 @@ app.on('before-quit', () => {
   if (config) config.flush();
 });
 
-app.on('will-quit', () => globalShortcut.unregisterAll());
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
+  connector.stop();
+});
 
 app.on('window-all-closed', () => {
   // Keep running in the tray; quitting is explicit.
@@ -551,15 +650,17 @@ app.whenReady().then(() => {
   config = new Config();
   t = i18n.make(currentLang());
 
-  const ua = cleanUserAgent(session.defaultSession.getUserAgent());
-  app.userAgentFallback = ua;
-  session.defaultSession.setUserAgent(ua);
-
   createAppMenu();
   setupIpc();
-  createMainWindow();
+  connector.start();
+  if (!isBrowserMode()) createMainWindow();
   createOverlayWindow();
   createTray();
   registerHotkeys();
   applyAutostart();
+
+  if (!config.get().general.onboarded) {
+    config.patch({ general: { onboarded: true } });
+    createSettingsWindow('connect');
+  }
 });

@@ -15,6 +15,7 @@ const DEFAULT_HOTKEYS = {
   cycleRepeat: 'Alt+Shift+R',
   toggleOverlay: 'Alt+Shift+O',
   editOverlay: 'Alt+Shift+M',
+  toggleLock: 'Alt+Shift+U',
   showApp: 'Alt+Shift+Y',
   openSettings: ''
 };
@@ -23,6 +24,10 @@ const DEFAULTS = {
   hotkeys: DEFAULT_HOTKEYS,
   overlay: {
     visible: true,
+    layout: 'card',
+    // 'locked': fully click-through, controls only in edit mode (for games).
+    // 'hover': hovering unfolds the player and its buttons are clickable.
+    interaction: 'locked',
     alwaysExpanded: false,
     hideWhenIdle: false,
     opacity: 1,
@@ -37,10 +42,12 @@ const DEFAULTS = {
     volumeStep: 5
   },
   general: {
+    source: 'browser',
+    onboarded: false,
     language: 'auto',
     autostart: false,
     closeToTray: true,
-    startHidden: false
+    showWindow: false
   },
   window: {
     width: 480,

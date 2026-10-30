@@ -35,7 +35,8 @@ h1 { margin: 0; font-size: 20px; letter-spacing: .5px; }
 
 nav {
   display: flex;
-  gap: 4px;
+  gap: 0;
+  overflow-x: auto;
   padding: 0 20px;
   border-bottom: 1px solid var(--line);
 }
@@ -44,7 +45,8 @@ nav button {
   border: 0;
   color: var(--muted);
   font: inherit;
-  padding: 10px 12px;
+  padding: 10px 10px;
+  white-space: nowrap;
   cursor: pointer;
   border-bottom: 2px solid transparent;
 }
@@ -167,3 +169,52 @@ button.ghost:hover { border-color: var(--accent); }
 
 .footer { margin-top: 24px; color: var(--muted); font-size: 12px; }
 .footer a { color: var(--accent); }
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  margin: 10px 0 6px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-weight: 600;
+}
+.status .dot { width: 10px; height: 10px; border-radius: 50%; background: #f87171; box-shadow: 0 0 8px rgba(248, 113, 113, .6); }
+.status.ok .dot { background: #34d399; box-shadow: 0 0 8px rgba(52, 211, 153, .7); }
+.steps { margin: 12px 0; padding-left: 22px; display: flex; flex-direction: column; gap: 12px; }
+.steps li { padding-left: 4px; }
+.steps code, .path {
+  display: block;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  font: 12px "Cascadia Mono", Consolas, monospace;
+  color: #d8b4fe;
+  user-select: text;
+  word-break: break-all;
+}
+.steps code.inline { display: inline; padding: 1px 6px; margin: 0; }
+button.ghost.small { padding: 4px 10px; font-size: 12px; margin-left: 4px; }
+a { color: var(--accent); }
+.row select { max-width: 300px; }
+
+[hidden] { display: none !important; }
+
+.row .text { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.row .text b { font-weight: 600; }
+.row .text small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.row.stack { flex-direction: column; align-items: stretch; }
+.row.stack select { max-width: none; width: 100%; }
+.row.stack .buttons { margin-top: 4px; }
+.note {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, .14), rgba(236, 72, 153, .1));
+  border: 1px solid rgba(168, 85, 247, .35);
+}
+.note p { margin: 4px 0 0; color: #d6cfee; font-size: 12.5px; }

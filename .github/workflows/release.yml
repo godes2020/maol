@@ -32,11 +32,16 @@ jobs:
       - name: Build
         run: npx electron-builder --win --x64 --publish never
 
+      - name: Pack browser extension
+        shell: pwsh
+        run: Compress-Archive -Path extension\* -DestinationPath dist\Moa-Connector-extension.zip
+
       - uses: actions/upload-artifact@v4
         with:
           name: Moa-windows
           path: |
             dist/*.exe
+            dist/*.zip
             dist/*.yml
           if-no-files-found: error
 
@@ -58,4 +63,5 @@ jobs:
           files: |
             dist/Moa-Setup-*.exe
             dist/Moa-*-portable.exe
+            dist/Moa-Connector-extension.zip
             dist/latest.yml

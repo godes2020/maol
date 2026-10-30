@@ -84,6 +84,18 @@ function markOnlySvg() {
 // ---------------------------------------------------------------------------
 // Static server so the overlay page can read its cover art into a canvas.
 
+// Default config straight from the app, without starting Electron.
+function loadDefaults() {
+  const Module = require('module');
+  const orig = Module._load;
+  Module._load = (req, ...rest) => (req === 'electron' ? { app: { getPath: () => '' } } : orig(req, ...rest));
+  try {
+    return require('../src/main/config');
+  } finally {
+    Module._load = orig;
+  }
+}
+
 function serve() {
   const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml' };
   const server = http.createServer((req, res) => {
@@ -139,6 +151,9 @@ async function main() {
   await renderSvg(iconSvg(), path.join(ROOT, 'build', 'icon.png'), 1024);
   await renderSvg(iconSvg(), path.join(ROOT, 'assets', 'icon.png'), 256);
   await renderSvg(traySvg(), path.join(ROOT, 'assets', 'tray.png'), 32);
+  for (const size of [16, 48, 128]) {
+    await renderSvg(iconSvg(), path.join(ROOT, 'extension', 'icons', `${size}.png`), size);
+  }
   await renderSvg(iconSvg(), path.join(MEDIA, 'logo.png'), 256);
 
   // ---- Demo cover (original artwork, so no copyrighted covers in the repo) ----
@@ -179,6 +194,7 @@ async function main() {
     { name: 'overlay-expanded', q: 'lang=en&expanded' },
     { name: 'overlay-muted', q: 'lang=en&muted' },
     { name: 'overlay-edit', q: 'lang=en&edit' },
+    { name: 'overlay-cover', q: 'lang=en&layout=cover' },
     { name: 'overlay-ru', q: 'lang=ru&expanded&title=Полуночная аркада&artist=Неоновые пиксели&repeat=ONE' }
   ];
   const ov = await browser.newPage({ viewport: { width: 336, height: 176 }, deviceScaleFactor: 2 });
@@ -198,66 +214,67 @@ async function main() {
   await hero.close();
 
   // ---- Settings window ----
-  const settings = await browser.newPage({ viewport: { width: 560, height: 720 }, deviceScaleFactor: 1 });
-  const defaults = {
-    playPause: 'Alt+Shift+K', next: 'Alt+Shift+Right', previous: 'Alt+Shift+Left', seekForward: 'Alt+Shift+L',
-    seekBackward: 'Alt+Shift+J', volumeUp: 'Alt+Shift+Up', volumeDown: 'Alt+Shift+Down', toggleMute: 'Alt+Shift+0',
-    cycleRepeat: 'Alt+Shift+R', toggleOverlay: 'Alt+Shift+O', editOverlay: 'Alt+Shift+M', showApp: 'Alt+Shift+Y', openSettings: ''
-  };
+  const { DEFAULTS } = loadDefaults();
   for (const lang of ['en', 'ru']) {
-    await settings.addInitScript(([d, l]) => {
-      const info = {
-        config: {
-          hotkeys: d,
-          overlay: { visible: true, alwaysExpanded: false, hideWhenIdle: false, reactive: true, intensity: 1, opacity: 1, scale: 1 },
-          playback: { seekStep: 5, volumeStep: 5 },
-          general: { language: 'auto', autostart: false, closeToTray: true, startHidden: false }
-        },
-        defaults: d, failed: [], version: '0.1.0', lang: l
-      };
-      window.moa = { getInfo: async () => info, patch: async () => info, resetHotkeys: async () => info, suspendHotkeys() {}, editOverlay() {}, resetOverlayPosition() {}, onInfo() {} };
-    }, [defaults, lang]);
-    await settings.goto(`http://127.0.0.1:${server.address().port}/src/settings/settings.html`);
-    await settings.waitForTimeout(400);
-    await settings.screenshot({ path: path.join(MEDIA, `settings-${lang}.png`) });
-  }
-  await settings.close();
-
-  // ---- GIF: compact → hover → toast → edit ----
-  const frames = path.join(MEDIA, '.frames');
-  fs.rmSync(frames, { recursive: true, force: true });
-  fs.mkdirSync(frames);
-  const gp = await browser.newPage({ viewport: { width: 336, height: 176 }, deviceScaleFactor: 2 });
-  await gp.goto(`${base}?lang=en&time=128`);
-  await gp.addStyleTag({ content: 'html{background:#16121f}' });
-  await gp.waitForTimeout(700);
-  const timeline = [
-    [0, null], [55, 'hover'], [95, 'toast'], [130, 'mute'], [160, 'unmute'], [175, 'leave'], [210, 'end']
-  ];
-  let frame = 0;
-  for (let i = 0; i < timeline.length - 1; i++) {
-    const [from, action] = timeline[i];
-    const to = timeline[i + 1][0];
-    if (action === 'hover') await gp.evaluate(() => window.demo.setHover(true));
-    if (action === 'toast') await gp.evaluate(() => window.demo.showToast('Volume 75%'));
-    if (action === 'mute') await gp.evaluate(() => { window.demo.state.muted = true; window.demo.applyState(window.demo.state); });
-    if (action === 'unmute') await gp.evaluate(() => { window.demo.state.muted = false; window.demo.applyState(window.demo.state); });
-    if (action === 'leave') await gp.evaluate(() => window.demo.setHover(false));
-    for (let f = from; f < to; f++) {
-      await gp.screenshot({ path: path.join(frames, `f${String(frame++).padStart(4, '0')}.png`) });
-      await gp.waitForTimeout(25);
+    for (const tab of ['connect', 'overlay']) {
+      const settings = await browser.newPage({ viewport: { width: 560, height: tab === 'overlay' ? 1180 : 720 }, deviceScaleFactor: 1 });
+      await settings.addInitScript(([cfg, l]) => {
+        const info = {
+          connector: { connected: true, version: '0.2.0', error: null },
+          extensionDir: 'C:\\Users\\you\\AppData\\Local\\Programs\\Moa\\resources\\extension',
+          config: cfg, defaults: cfg.hotkeys, failed: [], version: '0.2.0', lang: l
+        };
+        window.moa = new Proxy({ getInfo: async () => info, patch: async () => info, resetHotkeys: async () => info, onInfo() {} }, {
+          get: (t, k) => t[k] || (() => {})
+        });
+      }, [DEFAULTS, lang]);
+      await settings.goto(`http://127.0.0.1:${server.address().port}/src/settings/settings.html?tab=${tab}`);
+      await settings.waitForTimeout(400);
+      await settings.screenshot({ path: path.join(MEDIA, `settings-${tab}-${lang}.png`) });
+      await settings.close();
     }
   }
-  await gp.close();
+
+  // ---- GIFs. A fake clock makes every frame exactly 40 ms apart, so the
+  // animation in the GIF runs at its real, smooth speed. ----
+  async function recordGif(name, query, timeline, totalFrames) {
+    const frames = path.join(MEDIA, '.frames');
+    fs.rmSync(frames, { recursive: true, force: true });
+    fs.mkdirSync(frames);
+    const gp = await browser.newPage({ viewport: { width: 336, height: 176 }, deviceScaleFactor: 2 });
+    await gp.clock.install();
+    await gp.goto(`${base}?${query}`);
+    await gp.addStyleTag({ content: 'html{background:#16121f}' });
+    await gp.clock.runFor(1500);
+    for (let f = 0; f < totalFrames; f++) {
+      const action = timeline[f];
+      if (action) await gp.evaluate(action);
+      await gp.clock.runFor(40);
+      await gp.screenshot({ path: path.join(frames, `f${String(f).padStart(4, '0')}.png`) });
+    }
+    await gp.close();
+    // No dithering: dithered gradients shimmer from frame to frame.
+    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', '25', '-i', path.join(frames, 'f%04d.png'),
+      '-vf', 'scale=420:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=160:stats_mode=full[p];[b][p]paletteuse=dither=none',
+      path.join(MEDIA, `${name}.gif`)]);
+    fs.rmSync(frames, { recursive: true, force: true });
+  }
+
+  await recordGif('overlay-demo', 'lang=en&time=128', {
+    40: () => window.demo.setHover(true),
+    85: () => window.demo.showToast('Volume 75%'),
+    120: () => { window.demo.state.muted = true; window.demo.applyState(window.demo.state); },
+    150: () => { window.demo.state.muted = false; window.demo.applyState(window.demo.state); },
+    170: () => window.demo.setHover(false)
+  }, 215);
+
+  await recordGif('overlay-cover-demo', 'lang=en&time=60&layout=cover', {
+    60: () => window.demo.setHover(true),
+    120: () => window.demo.setHover(false)
+  }, 170);
+
   await browser.close();
   server.close();
-
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', '20', '-i', path.join(frames, 'f%04d.png'),
-    '-vf', 'fps=15,scale=420:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle',
-    path.join(MEDIA, 'overlay-demo.gif')]);
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', '20', '-i', path.join(frames, 'f%04d.png'),
-    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-vf', 'scale=672:-2', path.join(MEDIA, 'overlay-demo.mp4')]);
-  fs.rmSync(frames, { recursive: true, force: true });
   console.log('media written to', MEDIA);
 }
 

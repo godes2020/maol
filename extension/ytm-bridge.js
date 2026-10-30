@@ -1,6 +1,7 @@
-// Runs in the main world of music.youtube.com (injected by the main process).
-// Reads player state, analyses audio for the overlay visuals and executes
-// playback commands. Talks to the isolated preload through window.postMessage.
+// Runs in the main world of music.youtube.com — injected by the Moa window,
+// or loaded by the Moa Connector browser extension. Reads player state,
+// analyses audio for the overlay visuals and executes playback commands.
+// Talks to the isolated preload / content script through window.postMessage.
 (() => {
   if (window.__moa) return;
 
@@ -11,12 +12,17 @@
   const moviePlayer = () => $('#movie_player');
   const video = () => $('video');
 
+  // Player buttons live in the bottom bar or, in newer layouts, in
+  // <ytmusic-player-controls>; prefer the bar, then search the whole page.
   function clickIn(bar, selectors) {
-    for (const sel of selectors) {
-      const el = bar && $(sel, bar);
-      if (el) {
-        el.click();
-        return true;
+    for (const root of [bar, document]) {
+      if (!root) continue;
+      for (const sel of selectors) {
+        const el = $(sel, root);
+        if (el) {
+          el.click();
+          return true;
+        }
       }
     }
     return false;
@@ -25,16 +31,15 @@
   // ---- State -------------------------------------------------------------
 
   function readRepeat() {
-    const bar = playerBar();
-    if (!bar) return 'NONE';
-    const fromAttr = bar.getAttribute('repeat-mode') || bar.getAttribute('repeat-mode_') || bar.repeatMode_;
-    if (fromAttr) return String(fromAttr).toUpperCase();
     try {
       const app = $('ytmusic-app');
       const mode = app && app.queue && app.queue.store.getState().queue.repeatMode;
       if (mode) return String(mode).toUpperCase();
     } catch {}
-    const btn = $('.repeat', bar);
+    const bar = playerBar();
+    const fromAttr = bar && (bar.getAttribute('repeat-mode') || bar.repeatMode_);
+    if (fromAttr) return String(fromAttr).toUpperCase();
+    const btn = $('.repeat');
     const label = ((btn && (btn.getAttribute('title') || btn.getAttribute('aria-label'))) || '').toLowerCase();
     if (/one|одн|трек/.test(label)) return 'ONE';
     if (/all|все|плейлист/.test(label)) return 'ALL';
@@ -112,15 +117,18 @@
       analyser.connect(ctx.destination);
       freq = new Uint8Array(analyser.frequencyBinCount);
     }
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    // Routing the element through a context that the browser keeps suspended
+    // (autoplay policy) would silence the music, so wait until it runs.
+    if (ctx.state !== 'running') return false;
     if (!connected.has(v)) {
       try {
         ctx.createMediaElementSource(v).connect(analyser);
-        connected.add(v);
-      } catch (err) {
-        connected.add(v); // already connected by someone else; skip
+      } catch {
+        // Already routed elsewhere; analysis just stays silent.
       }
+      connected.add(v);
     }
-    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
     return true;
   }
 
@@ -235,23 +243,30 @@
       }
     },
     cycleRepeat() {
-      clickIn(playerBar(), ['.repeat', 'yt-icon-button.repeat', '[aria-label*="epeat"]']);
+      clickIn(playerBar(), ['yt-icon-button.repeat', '.repeat', '[aria-label*="epeat"]']);
     }
   };
 
-  window.__moa = {
-    cmd(name, arg) {
-      const fn = commands[name];
-      if (!fn) return null;
-      try {
-        ensureAudio();
-        const res = fn(arg);
-        setTimeout(() => post('state', readState()), 60);
-        return res === undefined ? null : res;
-      } catch (err) {
-        console.warn('[moa] command failed', name, err);
-        return null;
-      }
+  function run(name, arg) {
+    const fn = commands[name];
+    if (!fn) return null;
+    try {
+      ensureAudio();
+      const res = fn(arg);
+      setTimeout(() => post('state', readState()), 60);
+      return res === undefined ? null : res;
+    } catch (err) {
+      console.warn('[moa] command failed', name, err);
+      return null;
     }
-  };
+  }
+
+  window.__moa = { cmd: run };
+
+  // Commands relayed by the browser extension's content script.
+  window.addEventListener('message', (event) => {
+    const d = event.data;
+    if (event.source !== window || !d || d.__moa !== 2 || d.type !== 'cmd') return;
+    post('result', { id: d.id, value: run(d.name, d.arg) });
+  });
 })();

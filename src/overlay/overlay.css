@@ -1,10 +1,10 @@
 :root {
   --c1: 139, 92, 246;   /* dominant colour of the cover (rgb) */
   --c2: 236, 72, 153;   /* secondary colour of the cover (rgb) */
-  --e: 0;               /* music energy 0..1 */
-  --b: 0;               /* bass 0..1 */
+  --e: 0;               /* smoothed music energy 0..1 */
+  --b: 0;               /* smoothed bass 0..1 */
+  --pulse: 0;           /* soft beat glow, decays smoothly 0..1 */
   --intensity: 1;
-  --beat-ms: 2000ms;    /* drift period, follows the track tempo */
   --progress: 0;
   --opacity: 1;
   color-scheme: dark;
@@ -38,8 +38,9 @@ button { font: inherit; color: inherit; }
   background: #121214;
   box-shadow:
     0 6px 18px rgba(0, 0, 0, .45),
-    0 0 calc(4px + 14px * var(--b) * var(--intensity)) rgba(var(--c1), calc(.18 + .4 * var(--b) * var(--intensity)));
-  transition: height .26s cubic-bezier(.2, .8, .2, 1), opacity .2s, box-shadow .08s linear;
+    0 0 calc(6px + 16px * var(--pulse) * var(--intensity)) rgba(var(--c1), calc(.16 + .34 * var(--pulse) * var(--intensity)));
+  transition: height .32s cubic-bezier(.2, .8, .2, 1), width .32s cubic-bezier(.2, .8, .2, 1),
+    background .3s, box-shadow .3s, opacity .3s;
 }
 .card.expanded { height: 136px; }
 
@@ -56,11 +57,10 @@ button { font: inherit; color: inherit; }
   margin: -210px 0 0 -210px;
   background-size: cover;
   background-position: center;
-  filter: blur(26px) saturate(1.5);
+  filter: blur(28px) saturate(1.5) brightness(calc(.9 + .35 * var(--pulse) * var(--intensity)));
   opacity: .55;
-  transform: scale(calc(1 + .08 * var(--b) * var(--intensity)));
-  transition: transform .09s linear, opacity .6s;
-  animation: spin calc(var(--beat-ms) * 16) linear infinite;
+  animation: breathe 14s ease-in-out infinite alternate;
+  will-change: transform, filter;
 }
 
 .bg-blob {
@@ -70,18 +70,18 @@ button { font: inherit; color: inherit; }
   border-radius: 50%;
   filter: blur(30px);
   mix-blend-mode: screen;
-  opacity: calc(.28 + .5 * var(--e) * var(--intensity));
-  transition: opacity .12s linear;
+  opacity: calc(.26 + .3 * var(--e) * var(--intensity) + .25 * var(--pulse) * var(--intensity));
+  will-change: transform, opacity;
 }
 .bg-blob.b1 {
   background: radial-gradient(circle, rgba(var(--c1), .95), transparent 65%);
   left: -60px; top: -90px;
-  animation: drift1 calc(var(--beat-ms) * 4) ease-in-out infinite alternate;
+  animation: drift1 11s ease-in-out infinite alternate;
 }
 .bg-blob.b2 {
   background: radial-gradient(circle, rgba(var(--c2), .9), transparent 65%);
   right: -70px; bottom: -110px;
-  animation: drift2 calc(var(--beat-ms) * 3) ease-in-out infinite alternate;
+  animation: drift2 13s ease-in-out infinite alternate;
 }
 
 .bg-shade {
@@ -93,11 +93,9 @@ button { font: inherit; color: inherit; }
 .bg-flash {
   position: absolute;
   inset: 0;
-  background: radial-gradient(120% 140% at 15% 50%, rgba(var(--c2), .55), transparent 60%);
-  opacity: 0;
-  transition: opacity .35s ease-out;
+  background: radial-gradient(120% 160% at 12% 50%, rgba(var(--c2), .5), transparent 65%);
+  opacity: calc(.32 * var(--pulse) * var(--intensity));
 }
-.bg-flash.on { opacity: calc(.45 * var(--intensity)); transition: opacity .04s; }
 
 .card.paused .bg-art,
 .card.paused .bg-blob,
@@ -107,8 +105,12 @@ button { font: inherit; color: inherit; }
 .card.static .bg-blob,
 .card.static .bg-art { animation: none; transform: none; }
 .card.static .bg-flash { display: none; }
+.card.paused .bars i, .card.idle .bars i { transition: height .4s ease-out; }
 
-@keyframes spin { to { transform: rotate(360deg) scale(calc(1 + .08 * var(--b) * var(--intensity))); } }
+@keyframes breathe {
+  from { transform: scale(1) rotate(0deg); }
+  to { transform: scale(1.12) rotate(14deg); }
+}
 @keyframes drift1 { to { transform: translate(140px, 40px) scale(1.15); } }
 @keyframes drift2 { to { transform: translate(-150px, -30px) scale(.9); } }
 
@@ -124,8 +126,7 @@ button { font: inherit; color: inherit; }
   width: 56px;
   height: 56px;
   border-radius: 8px;
-  transform: scale(calc(1 + .04 * var(--b) * var(--intensity)));
-  transition: transform .08s linear;
+  transform: scale(calc(1 + .025 * var(--pulse) * var(--intensity)));
 }
 .cover img {
   position: absolute;
@@ -156,7 +157,7 @@ button { font: inherit; color: inherit; }
   stroke: rgb(var(--c1));
   stroke-linecap: round;
   stroke-dasharray: calc(var(--progress) * 100) 100;
-  filter: drop-shadow(0 0 calc(2px + 5px * var(--b) * var(--intensity)) rgba(var(--c1), .9));
+  filter: drop-shadow(0 0 calc(2px + 5px * var(--pulse) * var(--intensity)) rgba(var(--c1), .9));
   transition: stroke-dasharray .25s linear, stroke .6s;
 }
 
@@ -245,7 +246,7 @@ button { font: inherit; color: inherit; }
   border-radius: 2px;
   background: rgb(var(--c1));
   filter: brightness(1.5);
-  transition: height .07s linear, background .4s, opacity .2s;
+  transition: background .4s, opacity .2s;
 }
 .card.paused .bars i,
 .card.idle .bars i { height: 3px; }
@@ -298,6 +299,40 @@ button { font: inherit; color: inherit; }
 .controls { display: flex; align-items: center; gap: 2px; height: 34px; margin-left: -4px; }
 .controls .spacer { flex: 1; }
 
+/* ---------------- "Cover only" layout ---------------- */
+/* Collapsed, only the cover with its progress ring and beat glow is
+   visible; hovering unfolds the full player. */
+
+.cover-glow {
+  position: absolute;
+  inset: -9px;
+  border-radius: 16px;
+  background: radial-gradient(closest-side, rgba(var(--c1), .9), rgba(var(--c2), .45) 60%, transparent);
+  filter: blur(9px);
+  opacity: 0;
+  transition: opacity .4s;
+  pointer-events: none;
+}
+
+body.layout-cover .card.compact {
+  width: 76px;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+}
+body.layout-cover .card .bg { transition: opacity .3s; }
+body.layout-cover .card.compact .bg { opacity: 0; }
+body.layout-cover .card.compact .meta,
+body.layout-cover .card.compact .only-compact { display: none; }
+body.layout-cover .card.compact .cover-glow {
+  opacity: calc(.3 + .55 * var(--pulse) * var(--intensity) + .15 * var(--e));
+}
+body.layout-cover .card.compact .cover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .45);
+}
+body.layout-cover .card.paused.compact .cover-glow,
+body.layout-cover .card.idle.compact .cover-glow { opacity: .22; }
+
 /* ---------------- Edit mode ---------------- */
 
 .edit-hint {
@@ -323,9 +358,9 @@ body.edit .card {
   cursor: move;
   outline: 2px dashed rgba(255, 255, 255, .8);
   outline-offset: -2px;
-  height: 136px;
+  height: 158px;
 }
 body.edit .card .btn,
 body.edit .card .bar { -webkit-app-region: no-drag; }
 body.edit .edit-hint { display: flex; }
-body.edit .controls { visibility: hidden; }
+

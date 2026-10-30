@@ -6,7 +6,7 @@
 
   const card = $('card');
   const els = {
-    art: $('art'), bgArt: $('bgArt'), flash: $('flash'),
+    art: $('art'), bgArt: $('bgArt'),
     title: $('title'), artist: $('artist'), toast: $('toast'),
     cur: $('cur'), rem: $('rem'), bar: $('bar'), repeatBtn: $('repeatBtn'),
     eqs: [$('eqCompact'), $('eqFull')]
@@ -145,43 +145,72 @@
   }
 
   // ---------------- Audio reactivity ----------------
-  let energy = 0;
-  let bass = 0;
-  let flashTimer = 0;
+  // Audio frames arrive ~30 times a second and are noisy. They only set
+  // targets; a requestAnimationFrame loop eases towards them every frame so
+  // the glow breathes with the beat instead of flickering.
+  const target = { energy: 0, bass: 0, bands: [0, 0, 0, 0, 0] };
+  const shown = { energy: 0, bass: 0, pulse: 0, bands: [0, 0, 0, 0, 0] };
+  let beatPeriod = 500;
+  let lastFrame = performance.now();
+
   function applyAudio(a) {
     if (!cfg.reactive) {
-      root.setProperty('--e', 0);
-      root.setProperty('--b', 0);
+      target.energy = target.bass = 0;
+      target.bands = [0, 0, 0, 0, 0];
       return;
     }
-    // Fast attack, slower release looks more musical.
-    energy = a.energy > energy ? a.energy : energy * 0.85 + a.energy * 0.15;
-    bass = a.bass > bass ? a.bass : bass * 0.8 + a.bass * 0.2;
-    root.setProperty('--e', Math.min(1, energy * 1.6).toFixed(3));
-    root.setProperty('--b', Math.min(1, Math.max(0, (bass - 0.25) * 1.6)).toFixed(3));
-    const bands = a.bands || [];
-    for (const group of bars) {
-      group.forEach((el, i) => el.style.setProperty('--h', Math.min(1, (bands[i] || 0) * 1.5).toFixed(3)));
-    }
-    if (a.beat) {
-      els.flash.classList.add('on');
-      clearTimeout(flashTimer);
-      flashTimer = setTimeout(() => els.flash.classList.remove('on'), 70);
-    }
-    if (a.bpm >= 60 && a.bpm <= 200) root.setProperty('--beat-ms', `${Math.round(60000 / a.bpm)}ms`);
+    target.energy = Math.min(1, (a.energy || 0) * 1.6);
+    target.bass = Math.min(1, Math.max(0, ((a.bass || 0) - 0.25) * 1.5));
+    target.bands = (a.bands || []).map((v) => Math.min(1, v * 1.5));
+    if (a.bpm >= 60 && a.bpm <= 200) beatPeriod = 60000 / a.bpm;
+    // A beat lifts the glow; it then fades over roughly one beat.
+    if (a.beat) shown.pulse = Math.max(shown.pulse, 0.55 + 0.45 * target.bass);
   }
+
+  // Frame-rate independent exponential easing.
+  const ease = (from, to, rate, dt) => from + (to - from) * (1 - Math.exp(-rate * dt));
+
+  function frame(now) {
+    const dt = Math.min(0.1, (now - lastFrame) / 1000);
+    lastFrame = now;
+    const playing = state && state.playing && !card.classList.contains('idle');
+    const tEnergy = playing ? target.energy : 0;
+    const tBass = playing ? target.bass : 0;
+
+    shown.energy = ease(shown.energy, tEnergy, tEnergy > shown.energy ? 10 : 3, dt);
+    shown.bass = ease(shown.bass, tBass, tBass > shown.bass ? 12 : 4, dt);
+    // Decay the beat glow so it is mostly gone by the next beat.
+    const decay = 2.6 / Math.max(0.25, beatPeriod / 1000);
+    shown.pulse = Math.max(shown.bass * 0.5, shown.pulse * Math.exp(-decay * dt));
+
+    root.setProperty('--e', shown.energy.toFixed(3));
+    root.setProperty('--b', shown.bass.toFixed(3));
+    root.setProperty('--pulse', shown.pulse.toFixed(3));
+
+    for (let i = 0; i < shown.bands.length; i++) {
+      const tb = playing ? target.bands[i] || 0 : 0;
+      shown.bands[i] = ease(shown.bands[i], tb, tb > shown.bands[i] ? 18 : 6, dt);
+    }
+    for (const group of bars) {
+      group.forEach((el, i) => el.style.setProperty('--h', shown.bands[i].toFixed(3)));
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
 
   // ---------------- Config / edit / toast ----------------
   function applyConfig(c) {
     cfg = { ...cfg, ...c };
     root.setProperty('--opacity', cfg.opacity);
     root.setProperty('--intensity', cfg.intensity);
+    document.body.classList.toggle('layout-cover', cfg.layout === 'cover');
     card.classList.toggle('static', !cfg.reactive);
     setExpanded();
   }
 
   function setEdit(on) {
     editing = on;
+    if (!on) hovering = false;
     document.body.classList.toggle('edit', on);
     setExpanded();
   }
@@ -217,6 +246,8 @@
   });
 
   card.addEventListener('mouseenter', () => {
+    // A locked overlay ignores the mouse entirely so it never gets in the way in games.
+    if (cfg.interaction === 'locked' && !editing) return;
     hovering = true;
     setExpanded();
     if (window.moa) window.moa.setInteractive(true);
@@ -256,7 +287,7 @@
       muted: params.has('muted'),
       repeat: params.get('repeat') || 'NONE'
     };
-    applyConfig({ alwaysExpanded: params.has('expanded'), reactive: true, intensity: 1, opacity: 1 });
+    applyConfig({ alwaysExpanded: params.has('expanded'), layout: params.get('layout') || 'card', reactive: true, intensity: 1, opacity: 1 });
     if (params.has('edit')) setEdit(true);
     applyState(demo);
     if (!params.has('idle')) setArt(params.get('art') || '../../docs/media/demo-cover.png');

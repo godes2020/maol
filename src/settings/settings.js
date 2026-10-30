@@ -15,6 +15,46 @@
     });
   });
 
+  const startTab = new URLSearchParams(location.search).get('tab');
+  if (startTab) {
+    const btn = document.querySelector(`#tabs button[data-tab="${startTab}"]`);
+    if (btn) btn.click();
+  }
+
+  // ---------------- Connection ----------------
+  const step2 = document.getElementById('step2');
+  const extUrl = 'chrome://extensions';
+  const parts = t('settings.step2').split('{url}');
+  step2.append(parts[0]);
+  const code = document.createElement('code');
+  code.className = 'inline';
+  code.textContent = extUrl;
+  step2.append(code, parts[1] || '');
+
+  function renderConnection() {
+    const browser = info.config.general.source !== 'app';
+    document.getElementById('browserMode').hidden = !browser;
+    document.getElementById('appMode').hidden = browser;
+    const c = info.connector || {};
+    const status = document.getElementById('status');
+    status.classList.toggle('ok', Boolean(c.connected));
+    document.getElementById('statusText').textContent = c.error
+      ? t('settings.connectorError', { error: c.error })
+      : c.connected ? `${t('settings.connected')}${c.version ? ` · v${c.version}` : ''}` : t('settings.notConnected');
+    document.getElementById('extDir').textContent = info.extensionDir || '';
+  }
+
+  document.getElementById('openExtFolder').addEventListener('click', () => api.openExtensionFolder());
+  document.getElementById('openYtm').addEventListener('click', () => api.openYtm());
+  document.getElementById('openGuide').addEventListener('click', (e) => {
+    e.preventDefault();
+    api.openGuide();
+  });
+  api.onInfo((next) => {
+    info = next;
+    renderConnection();
+  });
+
   // ---------------- Hotkeys ----------------
   const list = document.getElementById('hotkeyList');
   const msg = document.getElementById('hotkeyMsg');
@@ -151,6 +191,7 @@
       if (input.type === 'range') v = Number(v);
       formatOutput(input);
       info = await api.patch(toPatch(input.dataset.path, v));
+      renderConnection();
     });
   });
 
@@ -158,4 +199,5 @@
   document.getElementById('resetOverlay').addEventListener('click', () => api.resetOverlayPosition());
 
   renderHotkeys();
+  renderConnection();
 })();

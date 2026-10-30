@@ -1,7 +1,7 @@
 {
   "name": "moa",
   "productName": "Moa",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Moa — Music Overlay App. YouTube Music desktop player with an in-game overlay and global hotkeys.",
   "main": "src/main/main.js",
   "author": "godes2020",
@@ -29,6 +29,7 @@
     "files": [
       "src/**/*",
       "assets/**/*",
+      "extension/**/*",
       "package.json"
     ],
     "win": {
@@ -72,10 +73,19 @@
         "repo": "maol",
         "releaseType": "release"
       }
+    ],
+    "extraResources": [
+      {
+        "from": "extension",
+        "to": "extension"
+      }
     ]
   },
   "devDependencies": {
     "electron": "^33.2.1",
     "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
   }
 }
