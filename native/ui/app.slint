@@ -889,12 +889,6 @@ export component AppWindow inherits Window {
                             Switch { y: (parent.height - self.height) / 2; checked: root.cfg.close-to-tray; toggled(v) => { root.set-bool("general.closeToTray", v); } }
                         }
                         ListRow {
-                            icon: @image-url("icons/cpu.svg");
-                            title: I18n.tr("gen.gpu");
-                            desc: I18n.tr("gen.gpu.desc");
-                            Switch { y: (parent.height - self.height) / 2; checked: root.cfg.gpu; toggled(v) => { root.set-bool("general.gpuNative", v); } }
-                        }
-                        ListRow {
                             icon: @image-url("icons/copy.svg");
                             title: I18n.tr("gen.diag");
                             desc: root.diag-copied ? I18n.tr("gen.diagCopied") : I18n.tr("gen.diag.desc");

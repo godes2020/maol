@@ -31,15 +31,10 @@ fn main() {
     }
     let listener = TcpListener::bind(("127.0.0.1", INSTANCE_PORT)).ok();
 
-    let cfg = config::Config::load();
-    // Skia draws on the CPU by default: a few megabytes instead of a GPU
-    // context. Hardware acceleration is opt-in.
+    // Always on the CPU: a GPU surface ignores the overlay's colour key, so
+    // with hardware acceleration the overlay showed a black box around it.
     if std::env::var_os("SLINT_BACKEND").is_none() {
-        let renderer = if cfg!(feature = "skia") {
-            if cfg.general.gpu { "skia" } else { "skia-software" }
-        } else {
-            "software"
-        };
+        let renderer = if cfg!(feature = "skia") { "skia-software" } else { "software" };
         let _ = slint::BackendSelector::new().backend_name("winit".into()).renderer_name(renderer.into()).select();
     }
     // Neither renderer gives the overlay real alpha on Windows, so the
