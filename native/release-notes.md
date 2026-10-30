@@ -20,7 +20,7 @@ Settings carry over from Moa 0.3.1 (`%APPDATA%\Moa`). The installer closes Moa, 
 
 ## Fixed in this build / Исправлено в этой сборке
 
-- No black box around the overlay: the window is cut to the card's shape, and the animated glow is drawn around it in Card and Cover styles · Вокруг оверлея больше нет чёрного прямоугольника: окно обрезано по форме карточки, а вокруг неё снова анимированная подсветка — и в «Карточке», и в «Обложке»
+- The animated glow around the overlay is back, in Card and Cover styles · Анимированная подсветка вокруг оверлея вернулась — и в «Карточке», и в «Обложке»
 - Moa's volume in the built-in player changes YouTube Music's own volume, so it no longer jumps back after a few seconds; other services keep the volume across tracks · Громкость из Moa во встроенном плеере меняет собственную громкость YouTube Music и больше не возвращается через несколько секунд; в других сервисах она сохраняется между треками
 - Sliders in settings, the player and the overlay's seek bar can be dragged, not only clicked · Ползунки в настройках, плеере и полоса перемотки в оверлее теперь перетаскиваются, а не только нажимаются
 - An installer that removes the old Moa first · Установщик, который сначала удаляет старую Moa

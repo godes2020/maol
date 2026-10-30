@@ -217,35 +217,6 @@ struct GlowWin {
 thread_local! {
     static GLOW: std::cell::RefCell<Option<GlowWin>> = const { std::cell::RefCell::new(None) };
     static OVERLAY: std::cell::Cell<Option<isize>> = const { std::cell::Cell::new(None) };
-    static SHAPE: std::cell::RefCell<Vec<(super::Rect, i32)>> = const { std::cell::RefCell::new(Vec::new()) };
-}
-
-/// Cuts the overlay window down to the given rounded rectangles. The colour
-/// key alone is not enough on every machine (some drivers and renderers show
-/// the key colour as black), while a window region is applied by Windows
-/// itself whatever draws into the window.
-pub fn set_overlay_shape(window: &slint::Window, parts: &[(super::Rect, i32)]) {
-    use windows::Win32::Graphics::Gdi::{CombineRgn, CreateRoundRectRgn, DeleteObject, SetWindowRgn, HRGN, RGN_OR};
-    let Some(h) = hwnd(window) else { return };
-    if SHAPE.with(|s| s.borrow().as_slice() == parts) {
-        return;
-    }
-    SHAPE.with(|s| *s.borrow_mut() = parts.to_vec());
-    unsafe {
-        let mut rgn: Option<HRGN> = None;
-        for (r, rad) in parts {
-            let part = CreateRoundRectRgn(r.x, r.y, r.x + r.w + 1, r.y + r.h + 1, rad * 2, rad * 2);
-            match rgn {
-                None => rgn = Some(part),
-                Some(all) => {
-                    CombineRgn(Some(all), Some(all), Some(part), RGN_OR);
-                    let _ = DeleteObject(part.into());
-                }
-            }
-        }
-        // The system owns the region from here on.
-        SetWindowRgn(h, rgn, true);
-    }
 }
 
 /// Remembers the overlay window the glow sits under.

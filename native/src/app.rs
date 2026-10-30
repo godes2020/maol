@@ -99,7 +99,6 @@ pub struct App {
     frame_timer: Timer,
     /// Card height the glow follows, eased like the card's own animation.
     glow_h: Cell<f32>,
-    glow_shrink: Cell<Option<Instant>>,
 
     sys_state: RefCell<Option<TrackState>>,
     ext_state: RefCell<Option<TrackState>>,
@@ -156,7 +155,6 @@ impl App {
             timers: RefCell::new(Vec::new()),
             frame_timer: Timer::default(),
             glow_h: Cell::new(0.0),
-            glow_shrink: Cell::new(None),
             sys_state: RefCell::new(None),
             ext_state: RefCell::new(None),
             ext_connected: Cell::new(false),
@@ -406,7 +404,7 @@ impl App {
         } else if !show && w.is_visible() {
             let _ = w.hide();
         }
-        self.sync_glow();
+        self.sync_glow(1.0);
     }
 
     /// Locked: every click goes into the game. Only edit mode and hover
@@ -537,7 +535,7 @@ impl App {
         pointer.start(TimerMode::Repeated, Duration::from_millis(60), move || {
             if let Some(app) = w.upgrade() {
                 app.tick_hover();
-                app.sync_glow();
+                app.sync_glow(0.06);
                 // Moved by dragging in edit mode.
                 let p = app.overlay.window().position();
                 if (p.x, p.y) != app.last_pos.get() && app.resize.borrow().is_none() {
@@ -634,7 +632,7 @@ impl App {
         let (e, p, bands) = (sh.energy, sh.pulse, sh.bands);
         drop(sh);
         drop(tgt);
-        self.sync_glow();
+        self.sync_glow(dt);
         if playing {
             self.clock.set(self.clock.get() + dt as f64);
         }
@@ -678,7 +676,7 @@ impl App {
 
     /// The glow layer under a colour-keyed overlay (see platform::set_glow):
     /// follows the card's shape and position, breathes with the music.
-    fn sync_glow(&self) {
+    fn sync_glow(&self, dt: f32) {
         let o = &self.overlay;
         let w = o.window();
         if !platform::overlay_keyed() || !w.is_visible() {
@@ -686,41 +684,17 @@ impl App {
             return;
         }
         let cover = o.get_layout_cover();
-        let editing = o.get_editing();
-        let open = editing || o.get_hot() || o.get_always_expanded();
+        let open = o.get_editing() || o.get_hot() || o.get_always_expanded();
         let (bw, _) = box_size(cover);
         let target = if cover { 96.0 } else if open { 136.0 } else { 76.0 };
-        // The window is cut to the card, so it grows at once and shrinks only
-        // after the card's own 320 ms animation, never cutting into it.
         let h = self.glow_h.get();
-        let h = if target >= h {
-            self.glow_shrink.set(None);
-            target
-        } else {
-            let since = self.glow_shrink.get().unwrap_or_else(Instant::now);
-            self.glow_shrink.set(Some(since));
-            if since.elapsed().as_millis() >= 340 { target } else { h }
-        };
+        let h = if h == 0.0 || (h - target).abs() < 0.5 { target } else { h + (target - h) * (1.0 - (-12.0 * dt).exp()) };
         self.glow_h.set(h);
         let k = self.overlay_scale() * w.scale_factor();
         let win = self.overlay_rect();
         let pad = (PAD * k).round() as i32;
         let ch = (h * k).round() as i32;
-        let u = |v: f32| (v * k).round() as i32;
         let card = Rect { x: pad, y: if o.get_anchor_bottom() { win.h - pad - ch } else { pad }, w: (bw * k).round() as i32, h: ch };
-        let radius = u(if cover { 14.0 } else { 12.0 });
-        let mut parts = vec![(card, radius)];
-        if editing {
-            // Edit toolbar and the resize grip, as laid out in overlay.slint.
-            let ty = if o.get_anchor_bottom() { pad } else { pad + u(if cover { 102.0 } else { 142.0 }) };
-            parts.push((Rect { x: pad, y: ty, w: card.w, h: u(26.0) }, u(9.0)));
-            let off = if cover { -u(14.0) } else { 0 };
-            let g = u(18.0);
-            let gx = if o.get_anchor_right() { off } else { card.w - g - off };
-            let gy = if o.get_anchor_bottom() { off } else { card.h - g - off };
-            parts.push((Rect { x: card.x + gx, y: card.y + gy, w: g, h: g }, 0));
-        }
-        platform::set_overlay_shape(w, &parts);
         let rgb = |c: slint::Color| (c.red(), c.green(), c.blue());
         let th = o.global::<crate::Theme>();
         let (playing, reactive, intensity) = {
@@ -734,7 +708,7 @@ impl App {
         platform::set_glow(Some(platform::Glow {
             win,
             card,
-            radius,
+            radius: ((if cover { 14.0 } else { 12.0 }) * k).round() as i32,
             c1: rgb(th.get_c1()),
             c2: rgb(th.get_c2()),
             strength: strength * o.get_card_opacity(),

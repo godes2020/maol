@@ -55,5 +55,3 @@ pub fn other_moa_running() -> bool {
 pub fn set_glow(_glow: Option<super::Glow>) {}
 
 pub fn glow_owner(_window: &slint::Window) {}
-
-pub fn set_overlay_shape(_window: &slint::Window, _parts: &[(super::Rect, i32)]) {}
