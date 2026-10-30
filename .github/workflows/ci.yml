@@ -48,3 +48,24 @@ jobs:
           $out
           if ($out -notmatch '"id":"1","value":true') { throw 'audio command failed' }
           if ($out -notmatch '"id":"3","value":true') { throw 'helper stopped answering' }
+
+  native:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+      - name: Build native Moa
+        run: cargo build --release --locked
+      - name: Smoke test
+        shell: pwsh
+        run: ./scripts/smoke.ps1 -Exe target/release/moa.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Moa-native-windows
+          path: native/target/release/moa.exe
+          if-no-files-found: error
