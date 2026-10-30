@@ -4,6 +4,7 @@ const {
   app,
   BrowserWindow,
   Menu,
+  Notification,
   Tray,
   globalShortcut,
   ipcMain,
@@ -306,7 +307,7 @@ function overlayConfig() {
 // beat glow, only while music plays and the glow is on.
 function updateAudioCapture() {
   if (!media) return;
-  const on = source() === 'system' && config.get().overlay.reactive && Boolean(lastState && lastState.playing);
+  const on = source() === 'system' && !viaExtension() && config.get().overlay.reactive && Boolean(lastState && lastState.playing);
   media.setAudio(on);
 }
 
@@ -496,12 +497,33 @@ function createAppMenu() {
 // ---------------------------------------------------------------------------
 // Player commands & hotkeys
 
+// The extension knows a YouTube Music tab better than Windows does (repeat,
+// exact beat), so with the system source a connected extension that has a
+// track takes over, unless something else is playing and its tab is paused.
+let extState = null;
+let sysState = null;
+function viaExtension() {
+  if (source() === 'browser') return true;
+  if (source() !== 'system' || !connector.connected || !extState || !extState.hasTrack) return false;
+  return extState.playing || !(sysState && sysState.playing);
+}
+
+function syncState() {
+  const s = viaExtension() ? extState : sysState;
+  handleState(s || { hasTrack: false, playing: false });
+}
+
 function ytm(name, arg) {
+  if (viaExtension()) return connector.cmd(name, arg);
   if (source() === 'system') return media ? media.cmd(name, arg) : Promise.resolve(null);
-  if (source() === 'browser') return connector.cmd(name, arg);
   if (!mainWin) return Promise.resolve(null);
   const code = `window.__moa ? window.__moa.cmd(${JSON.stringify(name)}, ${JSON.stringify(arg ?? null)}) : null`;
   return mainWin.webContents.executeJavaScript(code).catch(() => null);
+}
+
+function notifyHidden() {
+  if (!Notification.isSupported()) return;
+  new Notification({ title: 'Moa', body: t('overlay.hiddenNote', { key: config.get().hotkeys.toggleOverlay || '—' }), icon: ICON, silent: true }).show();
 }
 
 function toast(text) {
@@ -536,8 +558,9 @@ const actions = {
     const next = typeof res === 'string' ? res : REPEAT_NEXT[(lastState && lastState.repeat) || 'NONE'] || 'NONE';
     toast(t(REPEAT_LABEL[next] || 'overlay.repeatOff'));
   },
-  toggleOverlay: () => {
+  toggleOverlay: (fromOverlay) => {
     const visible = !config.get().overlay.visible;
+    if (!visible && fromOverlay === true) notifyHidden();
     config.patch({ overlay: { visible } });
     if (!visible && editMode) setEditMode(false);
     applyOverlayConfig();
@@ -651,29 +674,38 @@ function setupIpc() {
   });
 
   connector.on('state', (state) => {
-    if (source() === 'browser') handleState(state);
+    extState = state;
+    if (source() !== 'app') syncState();
   });
   connector.on('audio', (audio) => {
-    if (source() === 'browser') sendOverlay('overlay:audio', audio);
+    if (viaExtension()) sendOverlay('overlay:audio', audio);
   });
-  connector.on('status', pushSettingsInfo);
+  connector.on('status', () => {
+    if (!connector.connected) extState = null;
+    pushSettingsInfo();
+  });
   media.on('state', (state) => {
-    if (source() === 'system') handleState(state);
+    sysState = state;
+    if (source() === 'system') syncState();
   });
   media.on('status', () => {
     updateAudioCapture();
     pushSettingsInfo();
   });
   media.on('audio', (audio) => {
-    if (source() === 'system') sendOverlay('overlay:audio', audio);
+    if (source() === 'system' && !viaExtension()) sendOverlay('overlay:audio', audio);
   });
 
   ipcMain.on('settings:open-ytm', () => shell.openExternal(YTM_URL));
   ipcMain.on('settings:open-extension-folder', () => shell.openPath(extensionDir()));
   ipcMain.on('settings:open-guide', () => shell.openExternal(GUIDE_URL[currentLang()] || GUIDE_URL.en));
 
-  ipcMain.on('moa:command', (_e, name, arg) => runAction(name, arg));
-  ipcMain.on('moa:action', (_e, name) => runAction(name));
+  ipcMain.on('moa:command', (e, name, arg) => {
+    // The overlay's own ✕ hides it; say how to bring it back.
+    const fromOverlay = overlayWin && e.sender === overlayWin.webContents;
+    runAction(name, name === 'toggleOverlay' ? Boolean(fromOverlay) : arg);
+  });
+  ipcMain.on('moa:action', (_e, name) => runAction(name, false));
 
   ipcMain.on('overlay:ready', () => {
     sendOverlay('overlay:config', overlayConfig());
@@ -779,8 +811,10 @@ function applySource() {
   const src = source();
   if (src === 'system') media.start();
   else media.stop();
-  if (src === 'browser') connector.start();
-  else connector.stop();
+  // The extension server is tiny; it stays up so the extension can always
+  // connect (and improve the system source when it does).
+  if (src === 'app') connector.stop();
+  else connector.start();
   if (src !== 'app' && mainWin) mainWin.destroy();
   if (src === 'app' && !mainWin) createMainWindow(true);
   sendOverlay('overlay:config', overlayConfig());
@@ -846,7 +880,7 @@ app.whenReady().then(() => {
   createAppMenu();
   setupIpc();
   if (source() === 'system') media.start();
-  if (source() === 'browser') connector.start();
+  if (source() !== 'app') connector.start();
   if (source() === 'app') createMainWindow();
   createOverlayWindow();
   createTray();

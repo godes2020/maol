@@ -68,7 +68,7 @@
     [/apple|itunes/i, 'applemusic', 'Apple Music']
   ];
   function sourceBadge(s) {
-    if (info.source !== 'system') return { icon: 'youtubemusic', name: 'YouTube Music' };
+    if (info.source !== 'system' || !(s && s.app)) return { icon: 'youtubemusic', name: 'YouTube Music' };
     const id = (s && s.app) || '';
     const hit = APPS.find(([re]) => re.test(id));
     if (hit) return { icon: hit[1], name: hit[2] };
@@ -252,6 +252,7 @@
       const m = info.media || {};
       ok = Boolean(m.ready);
       text = ok ? t('status.system') : m.error ? `${t('status.systemError')}: ${m.error}` : t('status.starting');
+      if (info.connector && info.connector.connected) text += ` · ${t('status.extension')}`;
     } else if (info.source === 'browser') {
       const c = info.connector || {};
       ok = Boolean(c.connected);
@@ -262,7 +263,7 @@
     }
     status.classList.toggle('ok', ok);
     $('statusText').textContent = text;
-    $('browserSteps').hidden = info.source !== 'browser';
+    $('browserSteps').hidden = info.source !== 'browser' && !(info.connector && info.connector.connected);
     $('showWindowRow').hidden = info.source !== 'app';
     $('extDir').textContent = info.extensionDir || '';
   }
@@ -451,7 +452,11 @@
   $('moveOverlay').addEventListener('click', () => api.action('editOverlay'));
   $('resetOverlay').addEventListener('click', () => api.resetOverlayPosition());
 
+  $('unlockNow').addEventListener('click', () => save('overlay.interaction', 'hover'));
+
   function renderAll() {
+    const o = info.config.overlay;
+    $('lockedWarn').hidden = !(o.alwaysExpanded && o.interaction === 'locked');
     renderInputs();
     renderQuick();
     renderStatus();

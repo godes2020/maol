@@ -448,6 +448,18 @@ body.muted .ctl .i-muted { display: grid; }
 }
 .row + .row { border-top: 1px solid var(--line); }
 .row:hover { background: rgba(255, 255, 255, .02); }
+.warn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  background: rgba(251, 146, 60, .1);
+  color: #fdba74;
+  font-size: 12.5px;
+}
+.warn > span:nth-child(2) { flex: 1; }
+.warn .btn.small { color: var(--text); }
 .row-ic { width: 32px; height: 32px; border-radius: 10px; background: var(--panel-hi); color: var(--muted); flex: none; }
 .row-ic .ic { width: 16px; height: 16px; }
 .text { flex: 1; min-width: 0; }

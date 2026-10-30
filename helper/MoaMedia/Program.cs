@@ -25,7 +25,8 @@ namespace MoaMedia
         static GlobalSystemMediaTransportControlsSession session;
         static string trackKey;
         static string artKey;
-        static int artTries;
+        static int artHash;
+        static int artPolls;
         static string lastState;
         static DateTime lastSent;
         static int artSeq;
@@ -92,6 +93,7 @@ namespace MoaMedia
             if (session == null)
             {
                 trackKey = artKey = null;
+                artHash = 0;
                 SendState("{\"type\":\"state\",\"hasTrack\":false,\"playing\":false}", false);
                 return;
             }
@@ -121,16 +123,21 @@ namespace MoaMedia
             if (key != trackKey)
             {
                 trackKey = key;
-                artKey = null;
-                artTries = 0;
+                artPolls = 0;
             }
-            // Players often publish the cover a moment after the title.
-            if (artKey == null && props != null && artTries < 8)
+            // Players publish the new cover a moment after the new title, so
+            // the first read can still return the previous cover. Re-read it
+            // often for a few seconds after a track change, then now and then,
+            // and send it whenever the picture actually changes.
+            artPolls++;
+            if (props != null && (artPolls <= 15 || artPolls % 10 == 0))
             {
-                artTries++;
                 string data = ReadThumbnail(props.Thumbnail);
-                if (data != null || artTries >= 8)
+                int hash = data == null ? 0 : data.GetHashCode();
+                // A failed read is not a new cover; keep the current one.
+                if ((data != null || artKey == null) && (hash != artHash || artKey == null))
                 {
+                    artHash = hash;
                     artKey = "art" + (++artSeq);
                     Emit("{\"type\":\"art\",\"key\":" + Str(artKey) + ",\"data\":" + (data == null ? "null" : Str(data)) + "}");
                 }

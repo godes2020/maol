@@ -85,7 +85,7 @@ class SystemMedia extends EventEmitter {
     } else if (msg.type === 'art') {
       this.art.set(msg.key, msg.data);
       // Only the current and the previous cover are ever needed.
-      while (this.art.size > 2) this.art.delete(this.art.keys().next().value);
+      while (this.art.size > 3) this.art.delete(this.art.keys().next().value);
     } else if (msg.type === 'result') {
       const resolve = this.pending.get(msg.id);
       if (resolve) {

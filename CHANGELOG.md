@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1
+
+- **Cover art and glow colours now follow track changes.** Players send the new cover a moment after the new title; Moa now re-reads it and updates when the picture changes.
+- **The browser extension connects in “Any player” mode too** (no more “Moa is not running”). When it is connected and has a YouTube Music track, Moa uses it for more precise data and controls; otherwise it falls back to the Windows media controls.
+- Clearer overlay button settings: “Overlay buttons: Locked (games) / On hover”, with a warning and a one-click fix when “Always show controls” is on but the overlay is locked.
+- Hiding the overlay with its ✕ shows a notification with how to bring it back.
+
 ## 0.3.0
 
 - **Any player, no extension.** The new default source reads the Windows media controls through a tiny helper (`MoaMedia.exe`), so YouTube Music, Spotify, Yandex Music, SoundCloud, Apple Music, Deezer, VK, TIDAL and others work in any browser or app. You sign in on the service itself. Volume hotkeys change the player's slider in the Windows mixer.
