@@ -1,7 +1,7 @@
 {
   "name": "moa",
   "productName": "Moa",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Moa — Music Overlay App. YouTube Music desktop player with an in-game overlay and global hotkeys.",
   "main": "src/main/main.js",
   "author": "godes2020",

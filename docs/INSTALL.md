@@ -11,7 +11,7 @@
 ## Requirements
 
 - Windows 10 or Windows 11 (64-bit)
-- A Chromium-based browser: Google Chrome, Microsoft Edge, Yandex Browser, Opera or Brave
+- A browser: Google Chrome, Microsoft Edge, Yandex Browser, Opera, Brave, or Firefox / Zen 128+
 - About 300 MB of free disk space
 
 ## 1. Download
@@ -23,6 +23,7 @@ Open the [**latest release**](https://github.com/godes2020/maol/releases/latest)
 | `Moa-Setup-x.y.z.exe` | **Recommended.** A normal installer with Start menu and desktop shortcuts and an uninstaller. |
 | `Moa-x.y.z-portable.exe` | A single file that runs without installation. |
 | `Moa-Connector-extension.zip` | The browser extension on its own. The installer already includes it, so you only need this zip with the portable version. |
+| `Moa-Connector-firefox.xpi` | The same extension packed for Firefox and Zen. |
 
 ## 2. Install Moa
 
@@ -50,6 +51,26 @@ The status in **Settings → Connection** turns green (**Extension connected**),
 
 > If the YouTube Music tab was already open before you installed the extension, reload it with <kbd>F5</kbd>.
 > Chrome may sometimes remind you that developer-mode extensions are enabled. That's normal. Choose to keep the extension.
+
+### Firefox, Zen, LibreWolf, Floorp
+
+These browsers need Firefox 128 or newer and install the extension differently.
+
+**Quick way (until the browser restarts).**
+1. Type `about:debugging#/runtime/this-firefox` into the address bar.
+2. Click **Load Temporary Add-on…**.
+3. Open the `extension` folder from step 1 and select **`manifest.json`**.
+
+Firefox removes temporary add-ons when it closes, so you repeat these steps after each restart.
+
+**Permanent way.**
+1. Download **`Moa-Connector-firefox.xpi`** from the [latest release](https://github.com/godes2020/maol/releases/latest).
+2. Open `about:config`, accept the warning, find `xpinstall.signatures.required` and set it to **false**.
+3. Open `about:addons`, click the ⚙ gear and choose **Install Add-on From File…**, then select the `.xpi`.
+
+Zen, LibreWolf, Floorp, Firefox Developer Edition and Nightly allow this. Regular Firefox ignores the setting and says the add-on *could not be verified*, so use the quick way there.
+
+**After installing either way:** in `about:addons` open **Moa Connector → Permissions** and turn on **Access your data for music.youtube.com**. Firefox doesn't grant it on its own, and without it the extension can't see the tab. Then reload the YouTube Music tab.
 
 ## 4. Set it up for games
 

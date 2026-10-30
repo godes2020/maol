@@ -34,7 +34,9 @@ jobs:
 
       - name: Pack browser extension
         shell: pwsh
-        run: Compress-Archive -Path extension\* -DestinationPath dist\Moa-Connector-extension.zip
+        run: |
+          Compress-Archive -Path extension\* -DestinationPath dist\Moa-Connector-extension.zip
+          Copy-Item dist\Moa-Connector-extension.zip dist\Moa-Connector-firefox.xpi
 
       - uses: actions/upload-artifact@v4
         with:
@@ -64,4 +66,5 @@ jobs:
             dist/Moa-Setup-*.exe
             dist/Moa-*-portable.exe
             dist/Moa-Connector-extension.zip
+            dist/Moa-Connector-firefox.xpi
             dist/latest.yml

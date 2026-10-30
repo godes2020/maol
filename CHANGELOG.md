@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- **Firefox and Zen support.** Moa Connector now also works in Firefox 128+ and Firefox-based browsers (Zen, LibreWolf, Floorp). The release includes `Moa-Connector-firefox.xpi`, and the install guide has the steps.
+
 ## 0.2.0
 
 - **Sign in through your browser.** Google blocks sign-in inside app windows, so music now plays in your own browser. The new **Moa Connector** extension (Chrome, Edge, Yandex, Opera, Brave) links the YouTube Music tab to Moa. The built-in window remains as an option for listening without an account.

@@ -9,6 +9,7 @@
 | **`Moa-Setup-*.exe`** | Installer, includes the browser extension (recommended) · Установщик, расширение уже внутри (рекомендуется) |
 | **`Moa-*-portable.exe`** | Portable, no installation · Без установки |
 | **`Moa-Connector-extension.zip`** | Browser extension on its own, for the portable version · Расширение отдельно, для portable-версии |
+| **`Moa-Connector-firefox.xpi`** | Extension for Firefox / Zen · Расширение для Firefox / Zen ([guide](https://github.com/godes2020/maol/blob/HEAD/docs/INSTALL.md#firefox-zen-librewolf-floorp) · [гайд](https://github.com/godes2020/maol/blob/HEAD/docs/INSTALL.ru.md#firefox-zen-librewolf-floorp)) |
 
 > Windows may say *“Windows protected your PC”* — click **More info → Run anyway** (the app isn't code-signed yet).<br>
 > Windows может показать *«Система Windows защитила ваш компьютер»* — нажми **Подробнее → Выполнить в любом случае** (у приложения пока нет подписи).

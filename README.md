@@ -25,7 +25,7 @@
 
 |   |   |
 |---|---|
-| 🎵 **Your YouTube Music** | Music plays in your usual browser (Chrome, Edge, Yandex, Opera, Brave), so Google sign-in, playlists, your library and recommendations all work. The small **Moa Connector** extension links the browser tab to Moa. |
+| 🎵 **Your YouTube Music** | Music plays in your usual browser (Chrome, Edge, Yandex, Opera, Brave, Firefox, Zen), so Google sign-in, playlists, your library and recommendations all work. The small **Moa Connector** extension links the browser tab to Moa. |
 | 🪟 **In-game overlay** | A small player floats on top of every window, like the Discord overlay. Moa has no window of its own, just the overlay and a tray icon. |
 | 🖱 **Never in the way** | By default the overlay is **locked**: every click goes straight through it to your game. You can click on it freely in Dota 2 or CS2. The buttons only work in move mode, or switch it to “opens on hover”. |
 | 💿 **Two styles** | **Card** shows the cover, title and artist. **Cover only** shows just the cover with its progress ring and beat glow, and unfolds into the full player when needed. |
@@ -44,7 +44,7 @@
 
 1. Download **`Moa-Setup-x.y.z.exe`** from the [**latest release**](https://github.com/godes2020/maol/releases/latest) and run it. If Windows says *“Windows protected your PC”*, click **More info → Run anyway**. The app isn't code-signed yet.
 2. Moa starts in the tray and opens **Settings → Connection**.
-3. Click **Open folder**. In your browser, open `chrome://extensions` (or `edge://extensions`), turn on **Developer mode**, click **Load unpacked** and select that folder.
+3. Click **Open folder**. In your browser, open `chrome://extensions` (or `edge://extensions`), turn on **Developer mode**, click **Load unpacked** and select that folder. Firefox / Zen: [see the guide](docs/INSTALL.md#firefox-zen-librewolf-floorp).
 4. Open [music.youtube.com](https://music.youtube.com) in the browser, sign in and play a song. The overlay appears in the top-left corner. 🎉
 
 > 📖 The [step-by-step install guide](docs/INSTALL.md) covers every step with pictures, plus updating, uninstalling and troubleshooting.
@@ -188,7 +188,7 @@ Releases are built by [GitHub Actions](.github/workflows/release.yml): run the *
 ## 🗺 Roadmap
 
 - [ ] Publish Moa Connector to the Chrome Web Store (one-click install)
-- [ ] Firefox support
+- [x] Firefox and Zen support
 - [ ] Spotify and Yandex Music support
 - [ ] Like / dislike and lyrics in the overlay
 - [ ] macOS and Linux builds
